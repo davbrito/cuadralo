@@ -1,6 +1,10 @@
 import { isbot } from "isbot";
 import { renderToReadableStream } from "react-dom/server";
-import type { EntryContext, RouterContextProvider } from "react-router";
+import type {
+  EntryContext,
+  HandleErrorFunction,
+  RouterContextProvider,
+} from "react-router";
 import { ServerRouter } from "react-router";
 
 export default async function handleRequest(
@@ -42,3 +46,9 @@ export default async function handleRequest(
     status: responseStatusCode,
   });
 }
+
+export const handleError: HandleErrorFunction = (error, { request }) => {
+  if (!request.signal.aborted) {
+    console.error(error);
+  }
+};
