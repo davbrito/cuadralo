@@ -11,6 +11,7 @@
   ],
   "compilerOptions": {
     "composite": true,
+    "tsBuildInfoFile": "./node_modules/.cache/tsc/cloudflare.tsbuildinfo",
     "strict": true,
     "lib": ["DOM", "DOM.Iterable", "ES2022"],
     "types": ["vite/client", "./worker-configuration.d.ts", "node"],
@@ -20,13 +21,6 @@
     "jsx": "react-jsx",
     "baseUrl": ".",
     "rootDirs": [".", "./.react-router/types"],
-    "paths": {
-      "@/*": ["./app/*"],
-      "#components/*": ["./app/components/*"],
-      "#lib/*": ["./app/lib/*"],
-      "#hooks/*": ["./app/hooks/*"],
-      "#db/*": ["./app/db/*"]
-    },
     "esModuleInterop": true,
     "resolveJsonModule": true
   }

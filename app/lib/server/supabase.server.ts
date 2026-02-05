@@ -40,3 +40,15 @@ export function makeCookieMethods(request: Request): CookieMethodsServer & {
     },
   };
 }
+
+export interface BrowserSupabaseConfig {
+  supabaseUrl: string;
+  supabaseAnonKey: string;
+}
+
+export function getSupabaseClientConfig(env: Env): BrowserSupabaseConfig {
+  return {
+    supabaseUrl: env.SUPABASE_URL,
+    supabaseAnonKey: env.SUPABASE_ANON_KEY,
+  };
+}

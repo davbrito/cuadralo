@@ -1,4 +1,4 @@
-import { LoginForm } from "#components/login-form";
+import { LoginForm } from "@/components/login-form";
 import { SUPABASE } from "@/context";
 import { data, redirect } from "react-router";
 import type { Route } from "./+types/login";

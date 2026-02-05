@@ -1,4 +1,4 @@
-import type { ServerSupabase } from "#lib/server/supabase";
+import type { ServerSupabase } from "@/lib/server/supabase.server";
 import type { User } from "@supabase/supabase-js";
 import { AsyncLocalStorage } from "node:async_hooks";
 

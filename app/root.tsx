@@ -12,25 +12,28 @@ import type { Route } from "./+types/root";
 import { Toaster } from "./components/ui/sonner";
 import { supabaseMiddleware } from "./middleware/supabase";
 
-export const links: Route.LinksFunction = () => [
-  { rel: "preconnect", href: "https://fonts.googleapis.com" },
-  {
-    rel: "preconnect",
-    href: "https://fonts.gstatic.com",
-    crossOrigin: "anonymous",
-  },
-  {
-    rel: "stylesheet",
-    href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
-  },
-];
+const TITLE = "Cuádralo";
+const META_DESCRIPTION =
+  "Cuádralo - Una plataforma para gestionar tus citas con clientes de manera eficiente y sencilla.";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
     <html>
       <head>
         <meta charSet="utf-8" />
+        <title>{TITLE}</title>
+        <meta name="description" content={META_DESCRIPTION} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap"
+        />
         <Meta />
         <Links />
       </head>

@@ -1,19 +1,19 @@
-import { cn } from "#lib/utils.js";
-import { Button } from "#components/ui/button.js";
+import { cn } from "@/lib/utils.js";
+import { Button } from "@/components/ui/button.js";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "#components/ui/card.js";
+} from "@/components/ui/card.js";
 import {
   Field,
   FieldDescription,
   FieldGroup,
   FieldLabel,
-} from "#components/ui/field.js";
-import { Input } from "#components/ui/input.js";
+} from "@/components/ui/field.js";
+import { Input } from "@/components/ui/input.js";
 import { Form } from "react-router";
 
 export function LoginForm({

@@ -1,5 +1,5 @@
 import { CLOUDFLARE, SUPABASE } from "@/context";
-import { makeCookieMethods } from "@/lib/server/supabase";
+import { makeCookieMethods } from "@/lib/server/supabase.server";
 import { createServerClient } from "@supabase/ssr";
 import type { MiddlewareFunction } from "react-router";
 import type { Database } from "supabase.types";
