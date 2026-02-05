@@ -1,5 +1,7 @@
 {
   "files.associations": {
     "wrangler.json": "jsonc"
-  }
+  },
+  "SQL-Formatter-VSCode.dialect": "postgresql",
+  "SQL-Formatter-VSCode.keywordCase": "upper"
 }

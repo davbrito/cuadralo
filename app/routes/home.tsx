@@ -1,5 +1,8 @@
-import type { Route } from "./+types/home";
+import { authMiddleware } from "@/middleware/auth";
 import { Welcome } from "../welcome/welcome";
+import type { Route } from "./+types/home";
+
+export const middleware: Route.MiddlewareFunction[] = [authMiddleware];
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -8,8 +11,9 @@ export function meta({}: Route.MetaArgs) {
   ];
 }
 
-export function loader({ context }: Route.LoaderArgs) {
-  return { message: context.cloudflare.env.VALUE_FROM_CLOUDFLARE };
+export async function loader(args: Route.LoaderArgs) {
+  const message = "Hello World";
+  return { message };
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {

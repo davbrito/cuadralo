@@ -1,14 +1,15 @@
-import type { AppLoadContext, EntryContext } from "react-router";
-import { ServerRouter } from "react-router";
 import { isbot } from "isbot";
 import { renderToReadableStream } from "react-dom/server";
+import type { EntryContext, RouterContextProvider } from "react-router";
+import { ServerRouter } from "react-router";
+import { applySupabaseCookies } from "./lib/server/db";
 
 export default async function handleRequest(
   request: Request,
   responseStatusCode: number,
   responseHeaders: Headers,
   routerContext: EntryContext,
-  _loadContext: AppLoadContext,
+  contextProvider: RouterContextProvider,
 ) {
   let shellRendered = false;
   const userAgent = request.headers.get("user-agent");
@@ -34,6 +35,8 @@ export default async function handleRequest(
   if ((userAgent && isbot(userAgent)) || routerContext.isSpaMode) {
     await body.allReady;
   }
+
+  applySupabaseCookies(contextProvider, responseHeaders);
 
   responseHeaders.set("Content-Type", "text/html");
   return new Response(body, {

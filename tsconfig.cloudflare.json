@@ -6,7 +6,8 @@
     "app/**/.server/**/*",
     "app/**/.client/**/*",
     "workers/**/*",
-    "worker-configuration.d.ts"
+    "worker-configuration.d.ts",
+    "supabase.types.d.ts"
   ],
   "compilerOptions": {
     "composite": true,
@@ -20,7 +21,10 @@
     "baseUrl": ".",
     "rootDirs": [".", "./.react-router/types"],
     "paths": {
-      "~/*": ["./app/*"]
+      "@/*": ["./app/*"],
+      "#components/*": ["./app/components/*"],
+      "#lib/*": ["./app/lib/*"],
+      "#hooks/*": ["./app/hooks/*"]
     },
     "esModuleInterop": true,
     "resolveJsonModule": true
