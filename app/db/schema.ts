@@ -1,5 +1,12 @@
 import { eq, sql } from "drizzle-orm";
-import { pgPolicy, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  check,
+  pgPolicy,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { authenticatedRole, authUid, authUsers } from "drizzle-orm/supabase";
 
 export const services = pgTable.withRLS(
@@ -43,5 +50,13 @@ export const services = pgTable.withRLS(
       to: authenticatedRole,
       using: eq(authUid, t.userId),
     }),
+    check(
+      "services_name_length_check",
+      sql`char_length(${t.name}) > 0 AND char_length(${t.name}) <= 255`,
+    ),
+    check(
+      "services_description_length_check5000",
+      sql`char_length(${t.description}) <= 5000`,
+    ),
   ],
 );
