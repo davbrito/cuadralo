@@ -55,7 +55,7 @@ export const services = pgTable.withRLS(
       sql`char_length(${t.name}) > 0 AND char_length(${t.name}) <= 255`,
     ),
     check(
-      "services_description_length_check5000",
+      "services_description_length_check",
       sql`char_length(${t.description}) <= 5000`,
     ),
   ],
