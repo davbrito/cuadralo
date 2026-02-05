@@ -24,7 +24,8 @@
       "@/*": ["./app/*"],
       "#components/*": ["./app/components/*"],
       "#lib/*": ["./app/lib/*"],
-      "#hooks/*": ["./app/hooks/*"]
+      "#hooks/*": ["./app/hooks/*"],
+      "#db/*": ["./app/db/*"]
     },
     "esModuleInterop": true,
     "resolveJsonModule": true
