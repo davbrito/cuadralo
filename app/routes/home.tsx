@@ -6,8 +6,12 @@ export const middleware: Route.MiddlewareFunction[] = [authMiddleware];
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "New React Router App" },
-    { name: "description", content: "Welcome to React Router!" },
+    { title: "Cuádralo" },
+    {
+      name: "description",
+      content:
+        "Cuádralo - Una plataforma para gestionar tus citas con clientes de manera eficiente y sencilla.",
+    },
   ];
 }
 

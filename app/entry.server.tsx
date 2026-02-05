@@ -2,7 +2,6 @@ import { isbot } from "isbot";
 import { renderToReadableStream } from "react-dom/server";
 import type { EntryContext, RouterContextProvider } from "react-router";
 import { ServerRouter } from "react-router";
-import { applySupabaseCookies } from "./lib/server/db";
 
 export default async function handleRequest(
   request: Request,
@@ -35,8 +34,6 @@ export default async function handleRequest(
   if ((userAgent && isbot(userAgent)) || routerContext.isSpaMode) {
     await body.allReady;
   }
-
-  applySupabaseCookies(contextProvider, responseHeaders);
 
   responseHeaders.set("Content-Type", "text/html");
   return new Response(body, {

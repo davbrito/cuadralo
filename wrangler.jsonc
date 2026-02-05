@@ -7,6 +7,7 @@
   "name": "cuadralo",
   "compatibility_date": "2026-01-20",
   "main": "./workers/app.ts",
+  "compatibility_flags": ["nodejs_als"],
   "vars": {},
   "observability": {
     "enabled": true,

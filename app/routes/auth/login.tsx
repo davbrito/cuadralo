@@ -1,12 +1,11 @@
 import { LoginForm } from "#components/login-form";
-import { getServerSupabase } from "@/lib/server/db";
+import { SUPABASE } from "@/context";
 import { commitSession, getSession } from "@/lib/server/session";
 import { data, redirect } from "react-router";
 import type { Route } from "./+types/login";
 
 export async function loader({ request }: Route.LoaderArgs) {
   const session = await getSession(request.headers.get("Cookie"));
-  console.log("loader session data", session.data);
 
   if (session.has("userId")) return redirect("/");
 
@@ -25,10 +24,9 @@ export async function action(args: Route.ActionArgs) {
   const session = await getSession(request.headers.get("Cookie"));
 
   const formData = await request.formData();
-  console.log(Object.fromEntries(formData.entries()));
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
-  const supabase = getServerSupabase(args);
+  const supabase = SUPABASE.get();
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
