@@ -1,60 +1,54 @@
 import { LoginForm } from "#components/login-form";
 import { SUPABASE } from "@/context";
-import { commitSession, getSession } from "@/lib/server/session";
 import { data, redirect } from "react-router";
 import type { Route } from "./+types/login";
+import { flashStorage } from "@/lib/server/session";
 
-export async function loader({ request }: Route.LoaderArgs) {
-  const session = await getSession(request.headers.get("Cookie"));
-
-  if (session.has("userId")) return redirect("/");
-
-  return data(
-    { error: session.get("error") },
-    {
-      headers: {
-        "Set-Cookie": await commitSession(session),
-      },
-    },
-  );
+export async function loader() {
+  console.log("login loader");
+  const session = await SUPABASE.get().auth.getSession();
+  if (session.data.session) {
+    return redirect("/");
+  }
 }
 
 export async function action(args: Route.ActionArgs) {
   const { request } = args;
-  const session = await getSession(request.headers.get("Cookie"));
+  const session = await flashStorage.getSession(request.headers.get("Cookie"));
 
   const formData = await request.formData();
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
   const supabase = SUPABASE.get();
-  const { data, error } = await supabase.auth.signInWithPassword({
+  const response = await supabase.auth.signInWithPassword({
     email,
     password,
   });
-  if (error || !data.session) {
-    console.log("Login error:", error);
-    session.flash("error", error?.message || "Login failed");
+
+  if (response.error || !response.data.session) {
+    session.flash("error", response.error?.message || "Login failed");
 
     return redirect("/login", {
       headers: {
-        "Set-Cookie": await commitSession(session),
+        "Set-Cookie": await flashStorage.commitSession(session),
       },
     });
   }
 
-  console.log("Login success:", data);
-
-  session.set("userId", data.user.id);
-
-  return redirect("/", {
-    headers: {
-      "Set-Cookie": await commitSession(session),
+  return data(
+    {
+      error: session.get("error"),
     },
-  });
+    {
+      headers: {
+        "Set-Cookie": await flashStorage.commitSession(session),
+      },
+    },
+  );
 }
 
-export default function Page({ loaderData }: Route.ComponentProps) {
-  const { error } = loaderData;
+export default function Page({ actionData }: Route.ComponentProps) {
+  const error = actionData?.error;
 
   return (
     <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">

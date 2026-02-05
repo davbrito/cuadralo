@@ -1,31 +1,32 @@
 import { SUPABASE } from "@/context";
-import { destroySession, getSession } from "@/lib/server/session";
-import { Form, redirect } from "react-router";
+import { flashStorage } from "@/lib/server/session";
+import { redirect } from "react-router";
 
 export async function action(args: { request: Request }) {
+  console.log("logout action");
   const { request } = args;
-  const session = await getSession(request.headers.get("Cookie"));
+  const session = await flashStorage.getSession(request.headers.get("Cookie"));
   const supabase = SUPABASE.get();
-  await supabase.auth.signOut();
+  const result = await supabase.auth.signOut();
+
+  if (result.error) {
+    session.flash("error", result.error.message);
+    return redirect("/", {
+      headers: {
+        "Set-Cookie": await flashStorage.commitSession(session),
+      },
+    });
+  }
+
+  session.flash("success", "Logged out successfully");
 
   return redirect("/login", {
     headers: {
-      "Set-Cookie": await destroySession(session),
+      "Set-Cookie": await flashStorage.commitSession(session),
     },
   });
 }
 
-export default function LogoutPage() {
-  return (
-    <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
-      <Form method="post">
-        <button
-          type="submit"
-          className="rounded-md bg-red-600 px-4 py-2 text-white hover:bg-red-500"
-        >
-          Logout
-        </button>
-      </Form>
-    </div>
-  );
+export async function loader() {
+  return redirect("/");
 }

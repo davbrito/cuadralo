@@ -1,5 +1,6 @@
+import type { ServerSupabase } from "#lib/server/supabase";
+import type { User } from "@supabase/supabase-js";
 import { AsyncLocalStorage } from "node:async_hooks";
-import type { ServerSupabase } from "./lib/server/supabase";
 
 export interface CloudflareContext {
   env: Env;
@@ -8,6 +9,7 @@ export interface CloudflareContext {
 
 export const CLOUDFLARE = createALSContext<CloudflareContext>("Cloudflare");
 export const SUPABASE = createALSContext<ServerSupabase>("Supabase");
+export const USER = createALSContext<User>("User");
 
 function createALSContext<T>(name: string) {
   const als = new AsyncLocalStorage<T>();

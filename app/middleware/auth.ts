@@ -1,12 +1,16 @@
-import { getSession } from "@/lib/server/session";
+import { SUPABASE, USER } from "@/context";
 import { redirect, type MiddlewareFunction } from "react-router";
 
-export const authMiddleware = async ({ request }: { request: Request }) => {
-  const session = await getSession(request.headers.get("Cookie"));
-  const userId = session.get("userId");
-  console.log("session data", session.data);
+export const privateMiddleware: MiddlewareFunction<Response> = async (
+  args,
+  next,
+) => {
+  const supabase = SUPABASE.get();
+  const response = await supabase.auth.getSession();
 
-  if (!userId) {
+  if (!response.data.session) {
     throw redirect("/login");
   }
+
+  return USER.provide(response.data.session.user, () => next());
 };

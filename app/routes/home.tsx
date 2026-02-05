@@ -1,10 +1,7 @@
-import { authMiddleware } from "@/middleware/auth";
 import { Welcome } from "../welcome/welcome";
 import type { Route } from "./+types/home";
 
-export const middleware: Route.MiddlewareFunction[] = [authMiddleware];
-
-export function meta({}: Route.MetaArgs) {
+export function meta() {
   return [
     { title: "Cuádralo" },
     {
@@ -15,7 +12,7 @@ export function meta({}: Route.MetaArgs) {
   ];
 }
 
-export async function loader(args: Route.LoaderArgs) {
+export async function loader() {
   const message = "Hello World";
   return { message };
 }

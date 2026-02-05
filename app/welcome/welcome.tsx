@@ -1,6 +1,7 @@
 import { Form } from "react-router";
 import logoDark from "./logo-dark.svg";
 import logoLight from "./logo-light.svg";
+import { Button } from "@/components/ui/button";
 
 export function Welcome({ message }: { message: string }) {
   return (
@@ -41,14 +42,11 @@ export function Welcome({ message }: { message: string }) {
               ))}{" "}
               <li className="self-stretch p-3 leading-normal">
                 <Form method="post" action="/logout">
-                  <button
-                    type="submit"
-                    className="text-red-600 hover:underline"
-                  >
+                  <Button type="submit" variant="link" className="text-red-600">
                     Logout
-                  </button>
+                  </Button>
                 </Form>
-              </li>{" "}
+              </li>
               <li className="self-stretch p-3 leading-normal">{message}</li>
             </ul>
           </nav>

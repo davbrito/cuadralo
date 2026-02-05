@@ -11,11 +11,16 @@
     "postinstall": "npm run cf-typegen",
     "preview": "pnpm run build && vite preview",
     "typecheck": "npm run cf-typegen && react-router typegen && tsc -b",
-    "ui:add": "pnpx shadcn@latest add && mv ./#components/ui/* ./app/components/ui/ && rm -rf ./#components"
+    "ui:add": "pnpx shadcn@latest add && mv ./#components/ui/* ./app/components/ui/ && rm -rf ./#components",
+    "db:check": "command -v atlas >/dev/null || (echo 'atlas not found; install with: go install ariga.io/atlas/cmd/atlas@latest' && exit 1)",
+    "db:migrate:apply": "dotenv -e .env -- atlas migrate apply --env dev",
+    "db:migrate:new": "atlas migrate new --dir db/migrations",
+    "db:status": "dotenv -e .env -- atlas migrate status --env dev",
+    "db:inspect": "node scripts/db-inspect.js"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",
-    "@supabase/supabase-js": "^2.94.1",
+    "@supabase/supabase-js": "^2.95.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "isbot": "^5.1.31",
@@ -29,20 +34,28 @@
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "^1.13.5",
+    "@cloudflare/vite-plugin": "^1.23.1",
+    "@eslint/js": "^9.39.2",
     "@react-router/dev": "^7.10.0",
     "@tailwindcss/vite": "^4.1.13",
     "@types/node": "^22",
-    "@types/react": "^19.1.13",
+    "@types/react": "^19.2.13",
     "@types/react-dom": "^19.1.9",
+    "dotenv": "^17.2.3",
+    "dotenv-cli": "^11.0.0",
+    "eslint": "^9.39.2",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "globals": "^17.3.0",
     "prettier": "^3.8.1",
-    "supabase": "^2.75.3",
+    "supabase": "^2.75.5",
     "tailwindcss": "^4.1.13",
     "tw-animate-css": "^1.4.0",
     "typescript": "^5.9.2",
+    "typescript-eslint": "^8.54.0",
     "vite": "^7.1.7",
     "vite-plugin-devtools-json": "^1.0.0",
-    "vite-tsconfig-paths": "^5.1.4",
-    "wrangler": "^4.62.0"
+    "vite-tsconfig-paths": "^6.0.5",
+    "wrangler": "^4.63.0"
   }
 }

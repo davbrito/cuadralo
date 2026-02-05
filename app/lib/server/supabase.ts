@@ -1,16 +1,10 @@
-import { CLOUDFLARE, SUPABASE } from "@/context";
 import {
-  createServerClient,
   parseCookieHeader,
   serializeCookieHeader,
   type CookieMethodsServer,
 } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { AsyncLocalStorage } from "node:async_hooks";
-import type { MiddlewareFunction } from "react-router";
 import type { Database } from "supabase.types";
-
-export const supabaseContext = new AsyncLocalStorage<ServerSupabase>();
 
 export type ServerSupabase = SupabaseClient<Database>;
 
