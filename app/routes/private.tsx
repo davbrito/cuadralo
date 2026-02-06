@@ -1,6 +1,3 @@
-import { CLOUDFLARE } from "@/context";
-import { setupSupabaseClient } from "@/lib/client/supabase.client";
-import { getSupabaseClientConfig } from "@/lib/server/supabase.server";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -19,7 +16,17 @@ import {
   SidebarRail,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { CLOUDFLARE } from "@/context";
+import { setupSupabaseClient } from "@/lib/client/supabase.client";
+import { getSupabaseClientConfig } from "@/lib/server/supabase.server";
 import { privateMiddleware } from "@/middleware/auth";
+import {
+  Calendar01Icon,
+  Settings01Icon,
+  Table01Icon,
+  User03Icon,
+} from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { Form, Link, Outlet } from "react-router";
 import type { Route } from "./+types/private";
 
@@ -44,17 +51,47 @@ export default function PrivateLayout() {
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton isActive render={<Link to="/" />}>
-                    Servicios
+                    <HugeiconsIcon
+                      icon={Table01Icon}
+                      strokeWidth={2}
+                      className="size-4"
+                      aria-hidden
+                    />
+                    <span>Servicios</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton disabled>Clientes</SidebarMenuButton>
+                  <SidebarMenuButton disabled>
+                    <HugeiconsIcon
+                      icon={User03Icon}
+                      strokeWidth={2}
+                      className="size-4"
+                      aria-hidden
+                    />
+                    <span>Clientes</span>
+                  </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton disabled>Agenda</SidebarMenuButton>
+                  <SidebarMenuButton disabled>
+                    <HugeiconsIcon
+                      icon={Calendar01Icon}
+                      strokeWidth={2}
+                      className="size-4"
+                      aria-hidden
+                    />
+                    <span>Agenda</span>
+                  </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <SidebarMenuButton disabled>Ajustes</SidebarMenuButton>
+                  <SidebarMenuButton disabled>
+                    <HugeiconsIcon
+                      icon={Settings01Icon}
+                      strokeWidth={2}
+                      className="size-4"
+                      aria-hidden
+                    />
+                    <span>Ajustes</span>
+                  </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>

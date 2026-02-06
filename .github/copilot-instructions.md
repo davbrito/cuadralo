@@ -54,6 +54,20 @@ The application relies on `AsyncLocalStorage` to share context across the reques
      pnpm ui:add [component-name]
      ```
 
+### Icons (Hugeicons) 🔧
+
+- **Use Hugeicons for UI icons** to keep a consistent style and enable tree-shaking.
+- Install packages if missing: `pnpm add @hugeicons/react @hugeicons/core-free-icons`.
+- Import and use like:
+  ```tsx
+  import { HugeiconsIcon } from "@hugeicons/react";
+  import { Table01Icon } from "@hugeicons/core-free-icons";
+
+  <HugeiconsIcon icon={Table01Icon} strokeWidth={2} className="size-4" />
+  ```
+
+  Prefer static icon imports (e.g. `import { Table01Icon } from '@hugeicons/core-free-icons'`) so bundlers tree-shake unused icons.
+
 ### Authentication
 
 - Authentication is handled by Supabase.
