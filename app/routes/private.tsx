@@ -43,8 +43,8 @@ export default function PrivateLayout() {
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive>
-                    <Link to="/">Servicios</Link>
+                  <SidebarMenuButton isActive render={<Link to="/" />}>
+                    Servicios
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
