@@ -14,20 +14,16 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { SUPABASE } from "@/context";
+import { createService, listServices } from "@/services/service";
 import { Form, data } from "react-router";
 import type { Route } from "./+types/home";
 
 export async function loader() {
-  const supabase = SUPABASE.get();
-  const { data: services, error } = await supabase
-    .from("services")
-    .select("id, name, description, created_at")
-    .order("created_at", { ascending: false });
+  const { data: services, error } = await listServices();
 
   return {
-    services: services ?? [],
-    loadError: error?.message ?? null,
+    services,
+    loadError: error?.message,
   };
 }
 
@@ -63,12 +59,7 @@ export async function action({ request }: Route.ActionArgs) {
     );
   }
 
-  const supabase = SUPABASE.get();
-  const { error } = await supabase
-    .from("services")
-    .insert({ name, description })
-    .select("id")
-    .single();
+  const { error } = await createService({ name, description });
 
   if (error) {
     return data(
@@ -177,7 +168,7 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
               {loadError}
             </div>
           )}
-          {services.length === 0 ? (
+          {!services ? null : services.length === 0 ? (
             <p className="text-muted-foreground text-sm">
               Aún no tienes servicios registrados.
             </p>
