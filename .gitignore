@@ -17,7 +17,5 @@ worker-configuration.d.ts
 !.dev.vars.example
 !.env.example
 
-supabase.types.d.ts
-
 .agents/
 .vscode/mcp.json

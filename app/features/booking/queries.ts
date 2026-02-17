@@ -1,7 +1,7 @@
 import { getClerkClient } from "@/core/auth";
 import { DATABASE } from "@/core/context.server";
 import { bookings, profiles, services } from "@/core/db/schema.server";
-import { listAvailableSlots } from "@/services/reservation";
+import { listAvailableSlots } from "@/features/booking/reservation";
 import { and, eq, isNull } from "drizzle-orm";
 
 type PublicService = Pick<

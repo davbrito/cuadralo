@@ -1,5 +1,3 @@
-"use client";
-
 import { useMemo, useState } from "react";
 import type { Booking } from "@/core/types/booking";
 import { DateTime } from "luxon";

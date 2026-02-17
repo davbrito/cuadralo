@@ -18,7 +18,7 @@ import {
   getProviderProfileSettings,
   type ProviderAvailability,
   updateProviderProfileSettings,
-} from "@/services/profile";
+} from "@/features/provider/profile";
 import { parseSubmission, report, useForm } from "@conform-to/react/future";
 import { coerceFormValue, formatResult } from "@conform-to/zod/v4/future";
 import { set } from "lodash-es";

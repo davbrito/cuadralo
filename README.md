@@ -143,7 +143,7 @@ Aplicación full‑stack (SSR) construída con **React Router v7**, desplegada e
 ## Estado
 
 - Proyecto listo para desarrollo local y despliegue en Cloudflare Workers.
-- Tabla principal: `services` (ver `app/routes/home.tsx` y `app/services/service.ts`).
+- Tabla principal: `services` (ver `app/routes/home.tsx` y `app/features/provider/service.ts`).
 
 ---
 

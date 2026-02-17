@@ -20,7 +20,7 @@
 - Request-scoped DI uses AsyncLocalStorage contexts from `app/core/context.server.ts`.
 - Worker entry (`workers/app.ts`) initializes and injects `CLOUDFLARE` and `DATABASE` contexts.
 - Auth guard is in `app/middleware/auth.ts`; private area middleware is exported from `app/routes/private.tsx`.
-- Data logic belongs in `app/services` (example: `app/services/service.ts`).
+  -- Data logic belongs in `app/features/*` (domain services). Example: `app/features/provider/service.ts`.
 
 ## Build and Test
 
@@ -46,7 +46,6 @@
 
 - Cloudflare env bindings are typed in `worker-configuration.d.ts` (`DATABASE_URL`, `CLERK_SECRET_KEY`, `CLERK_PUBLISHABLE_KEY`).
 - Clerk is configured in `app/root.tsx` and used by auth middleware/routes.
-
 
 ## Security
 

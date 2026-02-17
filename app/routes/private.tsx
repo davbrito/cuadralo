@@ -1,5 +1,3 @@
-"use client";
-
 import { AppUserButton } from "@/components/app-user-button";
 import {
   Sidebar,

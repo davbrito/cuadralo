@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AUTH } from "@/core/context.server";
-import { listActiveBookings } from "@/services/reservation";
+import { listActiveBookings } from "@/features/booking/reservation";
 import type { Route } from "./+types/agenda";
 
 export async function loader() {

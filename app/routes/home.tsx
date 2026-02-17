@@ -20,7 +20,7 @@ import {
   createService,
   listServices,
   updateServiceDuration,
-} from "@/services/service";
+} from "@/features/provider/service";
 import { Form, data } from "react-router";
 import type { Route } from "./+types/home";
 

@@ -21,7 +21,7 @@ import {
   NativeSelectOption,
 } from "@/components/ui/native-select";
 import { getPublicReserveData } from "@/features/booking/queries";
-import { createGuestBooking } from "@/services/reservation";
+import { createGuestBooking } from "@/features/booking/reservation";
 import {
   parseSubmission,
   report,
