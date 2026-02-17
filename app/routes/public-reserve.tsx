@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/card";
 import {
   Field,
+  FieldContent,
   FieldDescription,
   FieldError,
   FieldGroup,
@@ -21,8 +22,27 @@ import {
 } from "@/components/ui/native-select";
 import { getPublicReserveData } from "@/features/booking/queries";
 import { createGuestBooking } from "@/services/reservation";
-import { Form, Link, data, redirect } from "react-router";
+import {
+  parseSubmission,
+  report,
+  useForm,
+  useFormData,
+} from "@conform-to/react/future";
+import { coerceFormValue, formatResult } from "@conform-to/zod/v4/future";
+import { Form, Link, redirect } from "react-router";
+import { z } from "zod/v4";
 import type { Route } from "./+types/public-reserve";
+import { useRef } from "react";
+
+const bookingSchema = coerceFormValue(
+  z.object({
+    serviceId: z.string().min(1, "Selecciona un servicio."),
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida."),
+    startAt: z.string().min(1, "Selecciona un horario."),
+    guestName: z.string().min(1, "Tu nombre es obligatorio."),
+    guestEmail: z.email("Email inválido."),
+  }),
+);
 
 function todayDateString(): string {
   return new Date().toISOString().slice(0, 10);
@@ -39,6 +59,7 @@ function formatSlotLong(iso: string) {
   return new Intl.DateTimeFormat(undefined, {
     dateStyle: "full",
     timeStyle: "short",
+    hour12: true,
   }).format(new Date(iso));
 }
 
@@ -67,61 +88,24 @@ export async function loader({ request, params }: Route.LoaderArgs) {
 
 export async function action({ request, params }: Route.ActionArgs) {
   const formData = await request.formData();
+  const submission = parseSubmission(formData);
+  const result = bookingSchema.safeParse(submission.payload);
+
+  if (!result.success) {
+    return {
+      result: report(submission, { error: formatResult(result) }),
+    };
+  }
+
+  const values = result.data;
 
   const userId = params.userId;
-  const serviceId = String(formData.get("serviceId") ?? "");
-  const date = String(formData.get("date") ?? "");
-  const startAtIso = String(formData.get("startAt") ?? "");
-  const guestName = String(formData.get("guestName") ?? "").trim();
-  const guestEmail = String(formData.get("guestEmail") ?? "").trim();
+  const serviceId = values.serviceId;
+  const startAtIso = values.startAt;
+  const guestName = values.guestName;
+  const guestEmail = values.guestEmail;
 
-  const fieldErrors: {
-    serviceId?: string;
-    startAt?: string;
-    guestName?: string;
-    guestEmail?: string;
-  } = {};
-
-  if (!serviceId) {
-    fieldErrors.serviceId = "Selecciona un servicio.";
-  }
-
-  if (!startAtIso) {
-    fieldErrors.startAt = "Selecciona un horario.";
-  }
-
-  if (!guestName) {
-    fieldErrors.guestName = "Tu nombre es obligatorio.";
-  }
-
-  if (!guestEmail) {
-    fieldErrors.guestEmail = "Tu email es obligatorio.";
-  }
-
-  if (Object.keys(fieldErrors).length > 0) {
-    const reserveData = await getPublicReserveData({
-      userId,
-      serviceId,
-      date,
-    });
-
-    return data(
-      {
-        ok: false,
-        date,
-        ...reserveData,
-        fieldErrors,
-        fields: {
-          guestName,
-          guestEmail,
-          startAt: startAtIso,
-        },
-      },
-      { status: 400 },
-    );
-  }
-
-  const result = await createGuestBooking({
+  const bookingResult = await createGuestBooking({
     userId,
     serviceId,
     startAtIso,
@@ -129,57 +113,41 @@ export async function action({ request, params }: Route.ActionArgs) {
     guestEmail,
   });
 
-  if (!result.ok) {
-    const reserveData = await getPublicReserveData({
-      userId,
-      serviceId,
-      date,
-    });
-
-    return data(
-      {
-        ok: false,
-        date,
-        ...reserveData,
-        formError: result.message,
-        fields: {
-          guestName,
-          guestEmail,
-          startAt: startAtIso,
-        },
-      },
-      { status: 400 },
-    );
+  if (!bookingResult.ok) {
+    return {
+      result: report(submission, {
+        error: { formErrors: [bookingResult.message] },
+      }),
+    };
   }
 
-  return redirect(`/p/${userId}/reserve/${result.bookingId}`);
+  throw redirect(`/r/${bookingResult.bookingId}`);
 }
 
 export default function PublicReservePage({
   loaderData,
   actionData,
 }: Route.ComponentProps) {
-  const currentData = actionData ?? loaderData;
-  const providerInitial = currentData.provider.userId.slice(0, 1).toUpperCase();
+  const providerInitial = loaderData.provider.userId.slice(0, 1).toUpperCase();
 
-  const fieldErrors =
-    actionData && !actionData.ok && "fieldErrors" in actionData
-      ? actionData.fieldErrors
-      : undefined;
-  const formError =
-    actionData && !actionData.ok && "formError" in actionData
-      ? actionData.formError
-      : null;
+  const selectedServiceId = loaderData.selectedService?.id ?? "";
 
-  const selectedServiceId = currentData.selectedService?.id ?? "";
-  const fields =
-    actionData && "fields" in actionData
-      ? actionData.fields
-      : {
-          guestName: "",
-          guestEmail: "",
-          startAt: "",
-        };
+  const formRef = useRef<HTMLFormElement>(null);
+  const { form, fields } = useForm(bookingSchema, {
+    id: "public-reserve",
+    lastResult: actionData?.result,
+    defaultValue: {
+      serviceId: selectedServiceId,
+      date: loaderData.date,
+    },
+    shouldValidate: "onSubmit",
+    shouldRevalidate: "onInput",
+  });
+  const formError = form.errors?.[0];
+
+  const startAtValue = useFormData(formRef, (payload) =>
+    payload.get("startAt"),
+  );
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 p-4 md:p-8">
@@ -188,25 +156,25 @@ export default function PublicReservePage({
           <div className="flex items-center gap-4">
             <Avatar>
               <AvatarImage
-                src={currentData.provider.imageUrl!}
-                alt={currentData.provider.displayName}
+                src={loaderData.provider.imageUrl!}
+                alt={loaderData.provider.displayName}
               />
               <AvatarFallback>{providerInitial}</AvatarFallback>
             </Avatar>
             <div>
-              <CardTitle>{currentData.provider.displayName}</CardTitle>
+              <CardTitle>{loaderData.provider.displayName}</CardTitle>
               <CardDescription>
                 {/* @{currentData.provider.userId}
                 {" · "} */}
-                {currentData.provider.serviceCount} servicios{" · "}
-                {currentData.provider.timezone}
+                {loaderData.provider.serviceCount} servicios{" · "}
+                {loaderData.provider.timezone}
               </CardDescription>
             </div>
           </div>
         </CardHeader>
       </Card>
 
-      {!currentData.selectedService ? (
+      {!loaderData.selectedService ? (
         <Card>
           <CardContent className="pt-6">
             <p className="text-muted-foreground text-sm">
@@ -224,13 +192,13 @@ export default function PublicReservePage({
             </CardHeader>
             <CardContent>
               <div className="flex flex-col gap-3">
-                {currentData.services.map((service) => {
+                {loaderData.services.map((service) => {
                   const isSelected = service.id === selectedServiceId;
 
                   return (
                     <Link
                       key={service.id}
-                      to={`/p/${currentData.provider.userId}/reserve?sid=${service.id}&date=${currentData.date}`}
+                      to={`/p/${loaderData.provider.userId}/reserve?sid=${service.id}&date=${loaderData.date}`}
                       className={[
                         "rounded-2xl border p-4 transition-colors",
                         isSelected
@@ -259,29 +227,36 @@ export default function PublicReservePage({
               </CardHeader>
               <CardContent>
                 <Form method="get" className="flex flex-col gap-4">
-                  <div className="grid gap-2 sm:max-w-xs">
-                    <FieldLabel htmlFor="date">Fecha</FieldLabel>
-                    <Input
-                      id="date"
-                      type="date"
-                      name="date"
-                      defaultValue={currentData.date}
-                    />
-                  </div>
-                  <div className="grid gap-2 sm:max-w-xs">
-                    <FieldLabel htmlFor="sid-mobile">Servicio</FieldLabel>
-                    <NativeSelect
-                      id="sid-mobile"
-                      name="sid"
-                      defaultValue={selectedServiceId}
-                    >
-                      {currentData.services.map((service) => (
-                        <NativeSelectOption key={service.id} value={service.id}>
-                          {service.name}
-                        </NativeSelectOption>
-                      ))}
-                    </NativeSelect>
-                  </div>
+                  <FieldGroup className="flex-row">
+                    <Field className="grid gap-2 sm:max-w-xs">
+                      <FieldLabel htmlFor="date">Fecha</FieldLabel>
+                      <FieldContent>
+                        <Input
+                          id="date"
+                          type="date"
+                          name="date"
+                          defaultValue={loaderData.date}
+                        />
+                      </FieldContent>
+                    </Field>
+                    <Field className="grid gap-2 sm:max-w-xs">
+                      <FieldLabel htmlFor="sid-mobile">Servicio</FieldLabel>
+                      <NativeSelect
+                        id="sid-mobile"
+                        name="sid"
+                        defaultValue={selectedServiceId}
+                      >
+                        {loaderData.services.map((service) => (
+                          <NativeSelectOption
+                            key={service.id}
+                            value={service.id}
+                          >
+                            {service.name}
+                          </NativeSelectOption>
+                        ))}
+                      </NativeSelect>
+                    </Field>
+                  </FieldGroup>
                   <div>
                     <Button type="submit" variant="outline">
                       Buscar disponibilidad
@@ -292,9 +267,9 @@ export default function PublicReservePage({
                 <div className="mt-6">
                   <p className="text-sm font-medium">Horarios disponibles</p>
                   <p className="text-muted-foreground mt-1 text-xs">
-                    {currentData.slots.length === 0
+                    {loaderData.slots.length === 0
                       ? "No hay slots para la fecha seleccionada."
-                      : `${currentData.slots.length} slots disponibles.`}
+                      : `${loaderData.slots.length} slots disponibles.`}
                   </p>
                 </div>
               </CardContent>
@@ -304,8 +279,8 @@ export default function PublicReservePage({
               <CardHeader>
                 <CardTitle className="text-base">Confirma tu cita</CardTitle>
                 <CardDescription>
-                  {currentData.selectedService.name} ·{" "}
-                  {currentData.selectedService.durationMinutes} min
+                  {loaderData.selectedService.name} ·{" "}
+                  {loaderData.selectedService.durationMinutes} min
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -314,49 +289,62 @@ export default function PublicReservePage({
                     {formError}
                   </div>
                 )}
-                <Form method="post" className="flex flex-col gap-6">
+                <Form
+                  {...form.props}
+                  ref={formRef}
+                  method="post"
+                  className="flex flex-col gap-6"
+                >
                   <input
                     type="hidden"
-                    name="serviceId"
+                    id={fields.serviceId.id}
+                    name={fields.serviceId.name}
                     value={selectedServiceId}
                   />
-                  <input type="hidden" name="date" value={currentData.date} />
+                  <input
+                    type="hidden"
+                    id={fields.date.id}
+                    name={fields.date.name}
+                    value={loaderData.date}
+                  />
 
                   <FieldGroup>
                     <Field>
                       <FieldLabel>Horario disponible</FieldLabel>
                       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                        {currentData.slots.map((slot) => {
-                          const inputId = `slot-${slot}`;
+                        {loaderData.slots.map((value, index) => {
+                          const id = `slot-${value}-${index}`;
 
                           return (
                             <label
-                              key={slot}
-                              htmlFor={inputId}
-                              className="border-input has-[:checked]:border-primary has-[:checked]:bg-primary/10 hover:bg-muted/50 flex cursor-pointer items-center justify-center rounded-xl border px-3 py-2 text-sm"
+                              key={id}
+                              htmlFor={id}
+                              className="border-input has-checked:border-primary has-checked:bg-primary/10 hover:bg-muted/50 flex cursor-pointer items-center justify-center rounded-xl border px-3 py-2 text-sm"
                             >
                               <input
-                                id={inputId}
-                                type="radio"
-                                name="startAt"
-                                value={slot}
-                                defaultChecked={fields.startAt === slot}
                                 className="sr-only"
+                                type="radio"
+                                id={id}
+                                name={fields.startAt.name}
+                                value={value}
+                                defaultChecked={
+                                  fields.startAt.defaultValue === value
+                                }
                               />
-                              {formatSlot(slot)}
+                              {formatSlot(value)}
                             </label>
                           );
                         })}
                       </div>
                       <FieldDescription>
-                        {fields.startAt
-                          ? `Seleccionado: ${formatSlotLong(fields.startAt)}`
+                        {startAtValue
+                          ? `Seleccionado: ${formatSlotLong(startAtValue)}`
                           : "Selecciona un horario para continuar."}
                       </FieldDescription>
                       <FieldError
                         errors={
-                          fieldErrors?.startAt
-                            ? [{ message: fieldErrors.startAt }]
+                          fields.startAt.errors?.length
+                            ? [{ message: fields.startAt.errors[0] }]
                             : undefined
                         }
                       />
@@ -367,17 +355,17 @@ export default function PublicReservePage({
                         Nombre completo
                       </FieldLabel>
                       <Input
-                        id="guestName"
-                        name="guestName"
                         placeholder="Ej: María González"
-                        defaultValue={fields.guestName}
                         required
-                        aria-invalid={fieldErrors?.guestName ? true : undefined}
+                        aria-invalid={fields.guestName.ariaInvalid}
+                        id={fields.guestName.id}
+                        name={fields.guestName.name}
+                        defaultValue={fields.guestName.defaultValue}
                       />
                       <FieldError
                         errors={
-                          fieldErrors?.guestName
-                            ? [{ message: fieldErrors.guestName }]
+                          fields.guestName.errors?.length
+                            ? [{ message: fields.guestName.errors[0] }]
                             : undefined
                         }
                       />
@@ -386,20 +374,18 @@ export default function PublicReservePage({
                     <Field>
                       <FieldLabel htmlFor="guestEmail">Email</FieldLabel>
                       <Input
-                        id="guestEmail"
-                        type="email"
-                        name="guestEmail"
                         placeholder="tu@email.com"
-                        defaultValue={fields.guestEmail}
                         required
-                        aria-invalid={
-                          fieldErrors?.guestEmail ? true : undefined
-                        }
+                        aria-invalid={!fields.guestEmail.valid}
+                        id={fields.guestEmail.id}
+                        name={fields.guestEmail.name}
+                        defaultValue={fields.guestEmail.defaultValue}
+                        type="email"
                       />
                       <FieldError
                         errors={
-                          fieldErrors?.guestEmail
-                            ? [{ message: fieldErrors.guestEmail }]
+                          fields.guestEmail.errors?.length
+                            ? [{ message: fields.guestEmail.errors[0] }]
                             : undefined
                         }
                       />
@@ -408,7 +394,7 @@ export default function PublicReservePage({
                     <div>
                       <Button
                         type="submit"
-                        disabled={currentData.slots.length === 0}
+                        disabled={loaderData.slots.length === 0}
                       >
                         Confirmar reserva
                       </Button>

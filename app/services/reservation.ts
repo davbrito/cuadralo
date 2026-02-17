@@ -124,9 +124,7 @@ export async function createGuestBooking(params: {
   startAtIso: string;
   guestName: string;
   guestEmail: string;
-}): Promise<
-  { ok: true; bookingId: string } | { ok: false; message: string }
-> {
+}): Promise<{ ok: true; bookingId: string } | { ok: false; message: string }> {
   const { userId, serviceId, startAtIso, guestName, guestEmail } = params;
   const db = DATABASE.get();
 

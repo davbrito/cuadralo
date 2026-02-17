@@ -104,63 +104,54 @@ export async function getPublicReserveData(params: {
   };
 }
 
-export async function getPublicBookingDetail(params: {
-  userId: string;
-  bookingId: string;
-}): Promise<PublicBookingDetailData | null> {
-  const { userId, bookingId } = params;
+export async function getPublicBookingDetail(bookingId: string): Promise<PublicBookingDetailData | null> {
   const db = DATABASE.get();
 
-  const [profile, bookingRow] = await Promise.all([
-    db
-      .select({
-        timezone: profiles.timezone,
-      })
-      .from(profiles)
-      .where(eq(profiles.userId, userId))
-      .limit(1)
-      .then((rows) => rows.at(0) ?? null),
-    db
-      .select({
-        bookingId: bookings.id,
-        startTime: bookings.startTime,
-        endTime: bookings.endTime,
-        createdAt: bookings.createdAt,
-        guestName: bookings.guestName,
-        guestEmail: bookings.guestEmail,
-        serviceId: services.id,
-        serviceName: services.name,
-        serviceDescription: services.description,
-        serviceDurationMinutes: services.durationMinutes,
-      })
-      .from(bookings)
-      .innerJoin(services, eq(services.id, bookings.serviceId))
-      .where(
-        and(
-          eq(bookings.id, bookingId),
-          eq(bookings.providerUserId, userId),
-          isNull(bookings.deletedAt),
-          isNull(services.deletedAt),
-        ),
-      )
-      .limit(1)
-      .then((rows) => rows.at(0) ?? null),
-  ]);
+  const bookingRow = await db
+    .select({
+      bookingId: bookings.id,
+      providerUserId: bookings.providerUserId,
+      startTime: bookings.startTime,
+      endTime: bookings.endTime,
+      createdAt: bookings.createdAt,
+      guestName: bookings.guestName,
+      guestEmail: bookings.guestEmail,
+      serviceId: services.id,
+      serviceName: services.name,
+      serviceDescription: services.description,
+      serviceDurationMinutes: services.durationMinutes,
+    })
+    .from(bookings)
+    .innerJoin(services, eq(services.id, bookings.serviceId))
+    .where(
+      and(
+        eq(bookings.id, bookingId),
+        isNull(bookings.deletedAt),
+        isNull(services.deletedAt),
+      ),
+    )
+    .limit(1)
+    .then((rows) => rows.at(0) ?? null);
 
-  if (!profile || !bookingRow) {
-    return null;
-  }
+  if (!bookingRow) return null;
+
+  const profile = await db
+    .select({ timezone: profiles.timezone })
+    .from(profiles)
+    .where(eq(profiles.userId, bookingRow.providerUserId))
+    .limit(1)
+    .then((rows) => rows.at(0) ?? null);
 
   const clerk = getClerkClient();
-  const providerUser = await clerk.users.getUser(userId);
+  const providerUser = await clerk.users.getUser(bookingRow.providerUserId);
 
   const provider = {
-    userId,
+    userId: bookingRow.providerUserId,
     imageUrl: providerUser.imageUrl,
     displayName:
       `${providerUser.firstName ?? ""} ${providerUser.lastName ?? ""}`.trim() ||
       "Provider",
-    timezone: profile.timezone,
+    timezone: profile?.timezone ?? "",
     serviceCount: 1,
   };
 

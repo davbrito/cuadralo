@@ -6,6 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Field,
   FieldError,
@@ -18,8 +19,52 @@ import {
   type ProviderAvailability,
   updateProviderProfileSettings,
 } from "@/services/profile";
-import { Form, data } from "react-router";
+import { parseSubmission, report, useForm } from "@conform-to/react/future";
+import { coerceFormValue, formatResult } from "@conform-to/zod/v4/future";
+import { set } from "lodash-es";
+import { ResultAsync } from "neverthrow";
+import { data, Form } from "react-router";
+import { z } from "zod/v4";
 import type { Route } from "./+types/settings";
+
+const schema = coerceFormValue(
+  z.object({
+    timezone: z
+      .string()
+      .min(1, "La zona horaria es obligatoria.")
+      .max(255, "La zona horaria no puede superar 255 caracteres.")
+      .trim(),
+    slotDurationMinutes: z
+      .number()
+      .int("La duración debe ser un número entero.")
+      .min(5, "La duración debe estar entre 5 y 1440.")
+      .max(1440, "La duración debe estar entre 5 y 1440."),
+    availabilities: z.record(
+      z.number(),
+      z
+        .object({
+          enabled: z.boolean().default(false),
+          startTime: z
+            .string()
+            .regex(
+              /^([01]\d|2[0-3]):[0-5]\d$/,
+              "El formato de hora no es válido.",
+            ),
+          endTime: z
+            .string()
+            .regex(
+              /^([01]\d|2[0-3]):[0-5]\d$/,
+              "El formato de hora no es válido.",
+            ),
+        })
+        .refine((data) => {
+          return !data.enabled
+            ? true
+            : toMinutes(data.startTime) < toMinutes(data.endTime);
+        }, "La hora de inicio debe ser menor que la hora de fin."),
+    ),
+  }),
+);
 
 const WEEK_DAYS = [
   { value: 1, label: "Lunes" },
@@ -30,12 +75,6 @@ const WEEK_DAYS = [
   { value: 6, label: "Sábado" },
   { value: 0, label: "Domingo" },
 ] as const;
-
-type AvailabilityField = {
-  enabled: boolean;
-  startTime: string;
-  endTime: string;
-};
 
 function normalizeTimeForInput(value: string): string {
   if (/^\d{2}:\d{2}:\d{2}$/.test(value)) {
@@ -50,30 +89,28 @@ function normalizeTimeForInput(value: string): string {
 }
 
 function buildAvailabilityFields(rows: ProviderAvailability[]) {
-  const map: Record<number, AvailabilityField> = Object.fromEntries(
-    WEEK_DAYS.map((day) => [
-      day.value,
-      {
+  const map = WEEK_DAYS.map((day) => {
+    const availabilityForDay = rows.find((row) => row.weekDay === day.value);
+    let data;
+
+    if (availabilityForDay) {
+      data = {
+        enabled: true,
+        startTime: normalizeTimeForInput(availabilityForDay.startTime),
+        endTime: normalizeTimeForInput(availabilityForDay.endTime),
+      };
+    } else {
+      data = {
         enabled: false,
         startTime: "09:00",
         endTime: "17:00",
-      } satisfies AvailabilityField,
-    ]),
-  );
-
-  for (const row of rows) {
-    if (map[row.weekDay]?.enabled) {
-      continue;
+      };
     }
 
-    map[row.weekDay] = {
-      enabled: true,
-      startTime: normalizeTimeForInput(row.startTime),
-      endTime: normalizeTimeForInput(row.endTime),
-    };
-  }
+    return [day.value, data] as const;
+  });
 
-  return map;
+  return Object.fromEntries(map);
 }
 
 function toMinutes(time: string): number {
@@ -88,158 +125,94 @@ export async function loader() {
 
 export async function action({ request }: Route.ActionArgs) {
   const formData = await request.formData();
+  const submission = parseSubmission(formData);
 
-  const timezone = String(formData.get("timezone") ?? "").trim();
-  const slotDurationMinutesRaw = String(
-    formData.get("slotDurationMinutes") ?? "",
-  ).trim();
-  const slotDurationMinutes = Number(slotDurationMinutesRaw);
-
-  const availabilityFields = Object.fromEntries(
-    WEEK_DAYS.map((day) => {
-      const enabled =
-        formData.get(`availability-${day.value}-enabled`) === "on";
-      const startTime = String(
-        formData.get(`availability-${day.value}-start`) ?? "",
-      ).trim();
-      const endTime = String(
-        formData.get(`availability-${day.value}-end`) ?? "",
-      ).trim();
-
-      return [
-        day.value,
-        {
-          enabled,
-          startTime,
-          endTime,
-        } satisfies AvailabilityField,
-      ];
-    }),
-  ) as Record<number, AvailabilityField>;
-
-  const fieldErrors: Record<string, string> = {};
-
-  if (!timezone) {
-    fieldErrors.timezone = "La zona horaria es obligatoria.";
-  } else if (timezone.length > 255) {
-    fieldErrors.timezone = "La zona horaria no puede superar 255 caracteres.";
+  for (const [key, value] of formData.entries()) {
+    if (key.startsWith("availabilities")) {
+      set(submission.payload, key, value === "on" ? true : value);
+    }
   }
 
-  if (!Number.isInteger(slotDurationMinutes)) {
-    fieldErrors.slotDurationMinutes = "La duración debe ser un número entero.";
-  } else if (slotDurationMinutes < 5 || slotDurationMinutes > 1440) {
-    fieldErrors.slotDurationMinutes = "La duración debe estar entre 5 y 1440.";
+  const validationResult = schema.safeParse(submission.payload);
+
+  if (!validationResult.success) {
+    return {
+      result: report(submission, { error: formatResult(validationResult) }),
+    };
   }
 
-  const availabilitiesToSave: ProviderAvailability[] = [];
+  const formValues = validationResult.data;
 
-  for (const day of WEEK_DAYS) {
-    const availability = availabilityFields[day.value];
+  const timezone = formValues.timezone;
+  const slotDurationMinutes = formValues.slotDurationMinutes;
 
-    if (!availability.enabled) {
-      continue;
-    }
+  const availabilitiesToSave: ProviderAvailability[] = WEEK_DAYS.map((day) => {
+    const field = formValues.availabilities[day.value];
+    if (!field.enabled) return null;
 
-    const errorKey = `availability-${day.value}`;
-
-    if (!availability.startTime || !availability.endTime) {
-      fieldErrors[errorKey] =
-        "Debes indicar hora de inicio y fin para este día.";
-      continue;
-    }
-
-    const isStartTimeValid = /^([01]\d|2[0-3]):[0-5]\d$/.test(
-      availability.startTime,
-    );
-    const isEndTimeValid = /^([01]\d|2[0-3]):[0-5]\d$/.test(
-      availability.endTime,
-    );
-
-    if (!isStartTimeValid || !isEndTimeValid) {
-      fieldErrors[errorKey] = "El formato de hora no es válido.";
-      continue;
-    }
-
-    if (toMinutes(availability.startTime) >= toMinutes(availability.endTime)) {
-      fieldErrors[errorKey] =
-        "La hora de inicio debe ser menor que la hora de fin.";
-      continue;
-    }
-
-    availabilitiesToSave.push({
+    return {
       weekDay: day.value,
-      startTime: availability.startTime,
-      endTime: availability.endTime,
-    });
-  }
+      startTime: field.startTime,
+      endTime: field.endTime,
+    };
+  }).filter((item) => item !== null);
+  console.log("Availabilities to save:", availabilitiesToSave);
 
-  if (availabilitiesToSave.length === 0) {
-    fieldErrors.availabilities = "Configura al menos un día disponible.";
-  }
-
-  if (Object.keys(fieldErrors).length > 0) {
-    return data(
-      {
-        ok: false,
-        fieldErrors,
-        fields: {
-          timezone,
-          slotDurationMinutes: slotDurationMinutesRaw,
-          availabilities: availabilityFields,
-        },
-      },
-      { status: 400 },
-    );
-  }
-
-  const [error] = await updateProviderProfileSettings({
-    timezone,
-    slotDurationMinutes,
-    availabilities: availabilitiesToSave,
-  }).then(
-    () => [null] as const,
-    (updateError) => [updateError] as const,
+  const updateResult = await ResultAsync.fromPromise(
+    updateProviderProfileSettings({
+      timezone,
+      slotDurationMinutes,
+      availabilities: availabilitiesToSave,
+    }),
+    (error) => error,
   );
 
-  if (error) {
+  if (updateResult.isErr()) {
     return data(
       {
-        ok: false,
-        formError: "No se pudo actualizar el perfil. Intenta de nuevo.",
-        fields: {
-          timezone,
-          slotDurationMinutes: slotDurationMinutesRaw,
-          availabilities: availabilityFields,
-        },
+        result: report(submission, {
+          error: {
+            formErrors: ["No se pudo actualizar el perfil. Intenta de nuevo."],
+          },
+        }),
       },
       { status: 500 },
     );
   }
 
-  return data({ ok: true, success: "Configuración actualizada." });
+  return { success: "Configuración actualizada." };
 }
 
 export default function SettingsPage({
   loaderData,
   actionData,
 }: Route.ComponentProps) {
-  const action = actionData ?? undefined;
+  const defaultAvailabilities = buildAvailabilityFields(
+    loaderData.profile.availabilities,
+  );
 
-  const fields =
-    action && "fields" in action
-      ? action.fields
-      : {
-          timezone: loaderData.profile.timezone,
-          slotDurationMinutes: String(loaderData.profile.slotDurationMinutes),
-          availabilities: buildAvailabilityFields(
-            loaderData.profile.availabilities,
-          ),
-        };
+  console.log(
+    "Loader data:",
+    loaderData.profile.availabilities,
+    "Default availabilities:",
+    defaultAvailabilities,
+  );
 
-  const fieldErrors =
-    action && "fieldErrors" in action ? action.fieldErrors : undefined;
-  const formError = action && "formError" in action ? action.formError : null;
-  const success = action && "success" in action ? action.success : null;
+  const { form, fields } = useForm(schema, {
+    lastResult: actionData?.result,
+    defaultValue: {
+      timezone: loaderData.profile.timezone,
+      slotDurationMinutes: String(loaderData.profile.slotDurationMinutes),
+      availabilities: defaultAvailabilities,
+    },
+  });
+
+  const fieldErrors = form.fieldErrors;
+  const formError = form.errors?.[0];
+  const success =
+    actionData && "success" in actionData ? actionData.success : null;
+
+  const fieldset = fields.availabilities.getFieldset();
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6 md:p-10">
@@ -265,45 +238,48 @@ export default function SettingsPage({
           <Form method="post" className="flex flex-col gap-6">
             <FieldGroup>
               <Field>
-                <FieldLabel htmlFor="timezone">Timezone</FieldLabel>
+                <FieldLabel htmlFor={fields.timezone.id}>Timezone</FieldLabel>
                 <Input
-                  id="timezone"
-                  name="timezone"
+                  id={fields.timezone.id}
+                  name={fields.timezone.name}
+                  defaultValue={fields.timezone.defaultValue}
                   placeholder="Ej: America/Caracas"
-                  defaultValue={fields.timezone}
                   required
-                  aria-invalid={fieldErrors?.timezone ? true : undefined}
+                  aria-invalid={fields.timezone.ariaInvalid}
                 />
                 <FieldError
                   errors={
-                    fieldErrors?.timezone
-                      ? [{ message: fieldErrors.timezone }]
+                    fields.timezone.ariaInvalid
+                      ? [{ message: fields.timezone.errors?.join(", ") }]
                       : undefined
                   }
                 />
               </Field>
 
               <Field>
-                <FieldLabel htmlFor="slotDurationMinutes">
+                <FieldLabel htmlFor={fields.slotDurationMinutes.id}>
                   Slot duration (minutos)
                 </FieldLabel>
                 <Input
-                  id="slotDurationMinutes"
-                  name="slotDurationMinutes"
+                  id={fields.slotDurationMinutes.id}
+                  name={fields.slotDurationMinutes.name}
                   type="number"
                   min={5}
                   max={1440}
                   step={1}
-                  defaultValue={fields.slotDurationMinutes}
+                  defaultValue={fields.slotDurationMinutes.defaultValue}
                   required
-                  aria-invalid={
-                    fieldErrors?.slotDurationMinutes ? true : undefined
-                  }
+                  aria-invalid={fields.slotDurationMinutes.ariaInvalid}
                 />
                 <FieldError
                   errors={
-                    fieldErrors?.slotDurationMinutes
-                      ? [{ message: fieldErrors.slotDurationMinutes }]
+                    fields.slotDurationMinutes.ariaInvalid
+                      ? [
+                          {
+                            message:
+                              fields.slotDurationMinutes.errors?.join(", "),
+                          },
+                        ]
                       : undefined
                   }
                 />
@@ -313,8 +289,14 @@ export default function SettingsPage({
                 <FieldLabel>Disponibilidad semanal</FieldLabel>
                 <div className="grid gap-3">
                   {WEEK_DAYS.map((day) => {
-                    const dayField = fields.availabilities[day.value];
-                    const dayError = fieldErrors?.[`availability-${day.value}`];
+                    const field = form.getFieldset(fieldset[day.value].name);
+
+                    console.log(
+                      "enablesd",
+                      field.enabled.defaultChecked,
+                      "name",
+                      field.enabled.name,
+                    );
 
                     return (
                       <div
@@ -323,10 +305,9 @@ export default function SettingsPage({
                       >
                         <div className="grid gap-3 sm:grid-cols-[160px_1fr_1fr] sm:items-end">
                           <label className="flex h-9 items-center gap-2 text-sm font-medium">
-                            <input
-                              type="checkbox"
-                              name={`availability-${day.value}-enabled`}
-                              defaultChecked={dayField.enabled}
+                            <Checkbox
+                              name={field.enabled.name}
+                              defaultChecked={field.enabled.defaultChecked}
                               className="h-4 w-4"
                             />
                             {day.label}
@@ -339,11 +320,11 @@ export default function SettingsPage({
                               Desde
                             </FieldLabel>
                             <Input
-                              id={`availability-${day.value}-start`}
+                              id={field.startTime.id}
                               type="time"
-                              name={`availability-${day.value}-start`}
-                              defaultValue={dayField.startTime}
-                              aria-invalid={dayError ? true : undefined}
+                              name={field.startTime.name}
+                              defaultValue={field.startTime.defaultValue}
+                              aria-invalid={field.startTime.ariaInvalid}
                             />
                           </div>
 
@@ -354,18 +335,20 @@ export default function SettingsPage({
                               Hasta
                             </FieldLabel>
                             <Input
-                              id={`availability-${day.value}-end`}
+                              id={field.endTime.id}
                               type="time"
-                              name={`availability-${day.value}-end`}
-                              defaultValue={dayField.endTime}
-                              aria-invalid={dayError ? true : undefined}
+                              name={field.endTime.name}
+                              defaultValue={field.endTime.defaultValue}
+                              aria-invalid={field.endTime.ariaInvalid}
                             />
                           </div>
                         </div>
                         <FieldError
                           className="mt-2"
                           errors={
-                            dayError ? [{ message: dayError }] : undefined
+                            field.endTime.ariaInvalid
+                              ? [{ message: field.endTime.errors?.join(", ") }]
+                              : undefined
                           }
                         />
                       </div>
@@ -375,7 +358,9 @@ export default function SettingsPage({
                 <FieldError
                   errors={
                     fieldErrors?.availabilities
-                      ? [{ message: fieldErrors.availabilities }]
+                      ? fieldErrors.availabilities.map((error) => ({
+                          message: error,
+                        }))
                       : undefined
                   }
                 />

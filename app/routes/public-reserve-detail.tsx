@@ -21,10 +21,12 @@ function formatDateTime(date: Date, timezone: string) {
 }
 
 export async function loader({ params }: Route.LoaderArgs) {
-  const detail = await getPublicBookingDetail({
-    userId: params.userId,
-    bookingId: params.bookingId,
-  });
+  const reserveId = params.reserveId;
+  if (!reserveId) {
+    throw data("Reserva no encontrada", { status: 404 });
+  }
+
+  const detail = await getPublicBookingDetail(reserveId);
 
   if (!detail) {
     throw data("Reserva no encontrada", { status: 404 });
