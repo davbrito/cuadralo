@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -14,14 +14,21 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { AUTH } from "@/core/context.server";
+import { cn } from "@/lib/utils";
 import { createService, listServices } from "@/services/service";
-import { Form, data } from "react-router";
+import { Form, Link, data } from "react-router";
 import type { Route } from "./+types/home";
 
 export async function loader() {
-  const { data: services, error } = await listServices();
+  const { userId } = AUTH.get();
+  const [error, services] = await listServices().then(
+    (services) => [null, services] as const,
+    (error) => [error, null] as const,
+  );
 
   return {
+    userId,
     services,
     loadError: error?.message,
   };
@@ -59,7 +66,10 @@ export async function action({ request }: Route.ActionArgs) {
     );
   }
 
-  const { error } = await createService({ name, description });
+  const [error] = await createService({ name, description }).then(
+    () => [null] as const,
+    (error) => [error] as const,
+  );
 
   if (error) {
     return data(
@@ -76,7 +86,7 @@ export async function action({ request }: Route.ActionArgs) {
 }
 
 export default function Home({ loaderData, actionData }: Route.ComponentProps) {
-  const { services, loadError } = loaderData;
+  const { services, loadError, userId } = loaderData;
   const action = actionData ?? undefined;
   const fields =
     action && "fields" in action
@@ -182,6 +192,16 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
                   <p className="text-muted-foreground mt-1 text-sm">
                     {service.description || "Sin descripción"}
                   </p>
+                  <div className="mt-3">
+                    <Link
+                      to={`/p/${userId}/reserve?sid=${service.id}`}
+                      className={cn(
+                        buttonVariants({ variant: "outline", size: "sm" }),
+                      )}
+                    >
+                      Link de reserva
+                    </Link>
+                  </div>
                 </li>
               ))}
             </ul>

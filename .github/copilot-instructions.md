@@ -1,108 +1,47 @@
-# Copilot Instructions for Cuádralo
+# Copilot instructions — Cuádralo
 
-## Project Overview
+## Project at a glance
+- Full-stack SSR app with React Router v7 on Cloudflare Workers.
+- Auth uses Clerk (`@clerk/react-router`).
+- Runtime DB access uses Drizzle ORM + Neon serverless Postgres.
+- UI stack: Tailwind v4, shadcn-style UI components in `app/components/ui`, Hugeicons.
 
-Cuádralo is a full-stack application built with **React Router v7** deployed on **Cloudflare Workers**. It uses **Supabase** for the database and authentication, **Drizzle ORM** for data access, and **Tailwind CSS** with **shadcn/ui** for the frontend.
+## Code Style
+- TypeScript strict config is the default (`tsconfig.json`, `tsconfig.cloudflare.json`, `tsconfig.node.json`).
+- Follow existing ESLint flat config in `eslint.config.ts` and current component patterns.
+- Use import alias `@/*` for `app/*`.
 
 ## Architecture
+- Routes are config-based in `app/routes.ts`.
+- Request-scoped DI uses AsyncLocalStorage contexts from `app/core/context.server.ts`.
+- Worker entry (`workers/app.ts`) initializes and injects `CLOUDFLARE` and `DATABASE` contexts.
+- Auth guard is in `app/middleware/auth.ts`; private area middleware is exported from `app/routes/private.tsx`.
+- Data logic belongs in `app/services` (example: `app/services/service.ts`).
 
-### Core Stack
+## Build and Test
+- Install: `pnpm install`
+- Dev: `pnpm dev`
+- Build: `pnpm build`
+- Preview: `pnpm preview`
+- Deploy: `pnpm deploy`
+- Cloudflare types: `pnpm cf-typegen`
+- Typecheck: `pnpm typecheck`
+- DB: `pnpm db:generate`, `pnpm db:migrate`, `pnpm db:push`, `pnpm db:studio`
+- Add shadcn component: `pnpm ui:add`
+- There is currently no `test` script in `package.json`.
 
-- **Framework:** React Router v7 (Config-based routing via `app/routes.ts`).
-- **Runtime:** Cloudflare Workers (SSR).
-- **Database:** PostgreSQL (Supabase).
-- **ORM:** Drizzle ORM (`drizzle-orm/supabase` for RLS policies).
-- **Styling:** Tailwind CSS v4, shadcn/ui.
+## Project Conventions
+- In server code, always read dependencies from contexts (`DATABASE.get()`, `AUTH.get()`, `CLOUDFLARE.get()`).
+- Do not pass env/config through React props when context is available.
+- Keep schema definitions in `app/core/db/schema.server.ts` and mirror changes via Drizzle migrations in `drizzle/`.
+- Keep route protection in middleware, not inside UI components.
 
-### Context & Dependency Injection
+## Integration Points
+- Cloudflare env bindings are typed in `worker-configuration.d.ts` (`DATABASE_URL`, `CLERK_SECRET_KEY`, `CLERK_PUBLISHABLE_KEY`).
+- Clerk is configured in `app/root.tsx` and used by auth middleware/routes.
+- Supabase files may exist, but active runtime auth/data flow is Clerk + Drizzle/Neon.
 
-The application relies on `AsyncLocalStorage` to share context across the request lifecycle.
-
-- **File:** `app/context.ts`
-- **Contexts:**
-  - `CLOUDFLARE` (Env, ExecutionContext)
-  - `SUPABASE` (SupabaseClient)
-  - `USER` (Authenticated User)
-- **Usage:** Always use `CLOUDFLARE.get()`, `SUPABASE.get()`, or `USER.get()` in loaders/actions/middleware instead of passing props down manually.
-
-### Routing & Middleware
-
-- **Configuration:** Routes are defined in `app/routes.ts` (not filesystem-based).
-- **Middleware:**
-  - `app/middleware/supabase.ts` initializes the Supabase client and manages cookies.
-  - `app/middleware/auth.ts` (`privateMiddleware`) protects routes and populates the `USER` context.
-
-## Conventions & Patterns
-
-### Imports & Aliases
-
-(defined in `tsconfig.cloudflare.json`):
-
-- Use `@/*` for `app/*` root.
-
-### Database (Drizzle ORM)
-
-- **Schema:** Defined in `app/db/schema.ts`.
-- **RLS:** Use `pgTable.withRLS` and helpers from `drizzle-orm/supabase` (`authUsers`, `authUid`) to define Row Level Security policies directly in the schema.
-- **Validation:** Use `check` constraints in the schema for data integrity.
-
-### UI Components (shadcn/ui)
-
-- **Adding Components:**.
-  1. Add the component:
-     ```bash
-     pnpm ui:add [component-name]
-     ```
-
-### Icons (Hugeicons) 🔧
-
-- **Use Hugeicons for UI icons** to keep a consistent style and enable tree-shaking.
-- Install packages if missing: `pnpm add @hugeicons/react @hugeicons/core-free-icons`.
-- Import and use like:
-  ```tsx
-  import { HugeiconsIcon } from "@hugeicons/react";
-  import { Table01Icon } from "@hugeicons/core-free-icons";
-
-  <HugeiconsIcon icon={Table01Icon} strokeWidth={2} className="size-4" />
-  ```
-
-  Prefer static icon imports (e.g. `import { Table01Icon } from '@hugeicons/core-free-icons'`) so bundlers tree-shake unused icons.
-
-### Authentication
-
-- Authentication is handled by Supabase.
-- Routes are protected via `privateMiddleware` in `app/middleware/auth.ts`.
-- Access the current user via `USER.get()` in server-side code.
-
-## Developer Workflow
-
-### Scripts
-
-- **Dev Server:** `pnpm dev`
-- **Type Generation:**
-  - Cloudflare types: `pnpm cf-typegen`
-  - Supabase types: `pnpm sb-typegen`
-- **Build:** `pnpm build`
-- **Deploy:** `pnpm deploy`
-
-### Database Migrations
-
-- Schema changes are managed via Drizzle.
-- Migrations are stored in `drizzle/`.
-
-## Common Tasks
-
-### Creating a New Route
-
-1. Define the route in `app/routes.ts`.
-2. Create the file in `app/routes/`.
-3. If protected, import and add `middleware` from `app/routes/private.tsx` (or import `privateMiddleware` directly).
-
-### Accessing Environment Variables
-
-Do not use `process.env`. Use the context:
-
-```typescript
-import { CLOUDFLARE } from "@/context";
-const { env } = CLOUDFLARE.get();
-```
+## Security
+- Never use `process.env` in runtime server code; use Cloudflare bindings via context.
+- Do not hardcode cookie/auth secrets; use environment secrets.
+- Preserve auth checks in middleware for all private routes.

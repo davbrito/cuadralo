@@ -1,5 +1,10 @@
 import "./app.css";
 
+import { esMX } from "@clerk/localizations";
+import { ClerkProvider } from "@clerk/react-router";
+import { clerkMiddleware, rootAuthLoader } from "@clerk/react-router/server";
+import { env } from "cloudflare:workers";
+import type { ClerkMiddlewareOptions } from "node_modules/@clerk/react-router/dist/server/types";
 import {
   isRouteErrorResponse,
   Links,
@@ -10,7 +15,18 @@ import {
 } from "react-router";
 import type { Route } from "./+types/root";
 import { Toaster } from "./components/ui/sonner";
-import { supabaseMiddleware } from "./middleware/supabase";
+
+const clerkOptions: ClerkMiddlewareOptions = {
+  secretKey: env.CLERK_SECRET_KEY,
+  publishableKey: env.CLERK_PUBLISHABLE_KEY,
+};
+
+export const middleware: Route.MiddlewareFunction[] = [
+  clerkMiddleware(clerkOptions),
+];
+
+export const loader = (args: Route.LoaderArgs) =>
+  rootAuthLoader(args, clerkOptions);
 
 const TITLE = "Cuádralo";
 const META_DESCRIPTION =
@@ -47,12 +63,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
-export const middleware: Route.MiddlewareFunction[] = [supabaseMiddleware];
-
-export default function App() {
+export default function App(props: Route.ComponentProps) {
   return (
     <>
-      <Outlet />
+      <ClerkProvider loaderData={props.loaderData} localization={esMX}>
+        <Outlet />
+      </ClerkProvider>
     </>
   );
 }

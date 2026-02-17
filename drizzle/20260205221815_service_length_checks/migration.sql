@@ -1,2 +1,0 @@
-ALTER TABLE "services" ADD CONSTRAINT "services_name_length_check" CHECK (char_length("name") > 0 AND char_length("name") <= 255);--> statement-breakpoint
-ALTER TABLE "services" ADD CONSTRAINT "services_description_length_check5000" CHECK (char_length("description") <= 5000);

@@ -1,4 +1,5 @@
-import { CLOUDFLARE } from "@/context";
+import { CLOUDFLARE, DATABASE, provide } from "@/core/context.server";
+import { initDB } from "@/core/db/index.server";
 import { createRequestHandler, RouterContextProvider } from "react-router";
 
 const requestHandler = createRequestHandler(
@@ -10,9 +11,15 @@ export default {
   async fetch(request, env, ctx) {
     const contextProvider = new RouterContextProvider();
     const cloudflare = { env, ctx };
+    const db = initDB();
 
-    return CLOUDFLARE.provide(cloudflare, () => {
-      return requestHandler(request, contextProvider);
-    });
+    const response = await provide(
+      [CLOUDFLARE.bind(cloudflare), DATABASE.bind(db)],
+      () => requestHandler(request, contextProvider),
+    );
+
+    console.log("Request handled, closing DB connection...");
+    ctx.waitUntil(db.$client.end());
+    return response;
   },
 } satisfies ExportedHandler<Env>;

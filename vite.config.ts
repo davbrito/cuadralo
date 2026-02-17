@@ -13,4 +13,5 @@ export default defineConfig({
     reactRouter(),
     tsconfigPaths(),
   ],
+  envPrefix: ["VITE_", "PUBLIC_"],
 });
