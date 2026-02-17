@@ -28,7 +28,7 @@ import {
   User03Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Link, Outlet } from "react-router";
+import { NavLink, Outlet } from "react-router";
 import type { Route } from "./+types/private";
 
 export const middleware: Route.MiddlewareFunction[] = [privateMiddleware];
@@ -60,7 +60,10 @@ export default function PrivateLayout() {
               <SidebarGroupContent>
                 <SidebarMenu>
                   <SidebarMenuItem>
-                    <SidebarMenuButton isActive render={<Link to="/" />}>
+                    <SidebarMenuButton
+                      className="aria-[current=page]:bg-primary/10 aria-[current=page]:text-primary"
+                      render={<NavLink to="/" />}
+                    >
                       <HugeiconsIcon
                         icon={Table01Icon}
                         strokeWidth={2}
@@ -71,7 +74,10 @@ export default function PrivateLayout() {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton disabled>
+                    <SidebarMenuButton
+                      className="aria-[current=page]:bg-primary/10 aria-[current=page]:text-primary"
+                      disabled
+                    >
                       <HugeiconsIcon
                         icon={User03Icon}
                         strokeWidth={2}
@@ -82,7 +88,10 @@ export default function PrivateLayout() {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton disabled>
+                    <SidebarMenuButton
+                      className="aria-[current=page]:bg-primary/10 aria-[current=page]:text-primary"
+                      disabled
+                    >
                       <HugeiconsIcon
                         icon={Calendar01Icon}
                         strokeWidth={2}
@@ -93,7 +102,10 @@ export default function PrivateLayout() {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton disabled>
+                    <SidebarMenuButton
+                      className="aria-[current=page]:bg-primary/10 aria-[current=page]:text-primary"
+                      render={<NavLink to="/settings" />}
+                    >
                       <HugeiconsIcon
                         icon={Settings01Icon}
                         strokeWidth={2}

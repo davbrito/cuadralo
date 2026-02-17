@@ -1,68 +1,35 @@
 import { DATABASE } from "@/core/context.server";
-import { availabilities, bookings, services } from "@/core/db/schema.server";
-import { and, eq, gt, gte, isNull, lt } from "drizzle-orm";
-
-function parseDateOnly(date: string): Date | null {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    return null;
-  }
-
-  const parsed = new Date(`${date}T00:00:00.000Z`);
-  if (Number.isNaN(parsed.getTime())) {
-    return null;
-  }
-
-  return parsed;
-}
-
-function getDayBoundsUTC(date: string): { start: Date; end: Date } | null {
-  const parsed = parseDateOnly(date);
-  if (!parsed) {
-    return null;
-  }
-
-  const start = new Date(parsed);
-  const end = new Date(parsed);
-  end.setUTCDate(end.getUTCDate() + 1);
-
-  return { start, end };
-}
-
-function getWeekdayUTC(date: string): number | null {
-  const parsed = parseDateOnly(date);
-  if (!parsed) {
-    return null;
-  }
-
-  return parsed.getUTCDay();
-}
+import {
+  availabilities,
+  bookings,
+  profiles,
+  services,
+} from "@/core/db/schema.server";
+import { and, eq, gt, isNull, lt, sql } from "drizzle-orm";
+import { DateTime } from "luxon";
 
 function timeToMinutes(value: string): number {
   const [hours, minutes] = value.split(":").map((part) => Number(part));
   return hours * 60 + minutes;
 }
 
-function createUtcDateAtMinutes(date: string, minutes: number): Date {
-  const [year, month, day] = date.split("-").map(Number);
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  return new Date(Date.UTC(year, month - 1, day, hours, mins, 0, 0));
-}
-
 export async function listAvailableSlots(params: {
   userId: string;
   serviceId: string;
   date: string;
+  timezone: string;
 }): Promise<string[]> {
-  const { userId, serviceId, date } = params;
+  const { userId, serviceId, date, timezone } = params;
   const db = DATABASE.get();
 
-  const dayBounds = getDayBoundsUTC(date);
-  const weekDay = getWeekdayUTC(date);
-
-  if (!dayBounds || weekDay === null) {
+  const dt = DateTime.fromISO(date, { zone: timezone });
+  if (!dt.isValid) {
     return [];
   }
+
+  const dayBounds = { start: dt.startOf("day"), end: dt.endOf("day") };
+  console.log("Day bounds:", dayBounds.start.toISO(), dayBounds.end.toISO());
+  const weekDay = dt.weekday % 7; // Convertir a formato 0 (domingo) - 6 (sábado)
 
   const service = await db
     .select({
@@ -78,7 +45,7 @@ export async function listAvailableSlots(params: {
       ),
     )
     .limit(1)
-    .then((rows) => rows[0] ?? null);
+    .then((rows) => rows.at(0));
 
   if (!service) {
     return [];
@@ -107,8 +74,7 @@ export async function listAvailableSlots(params: {
         and(
           eq(bookings.providerUserId, userId),
           isNull(bookings.deletedAt),
-          gte(bookings.startTime, dayBounds.start),
-          lt(bookings.startTime, dayBounds.end),
+          sql`${bookings.startTime} BETWEEN ${dayBounds.start.toJSDate()} AND ${dayBounds.end.toJSDate()}`,
         ),
       ),
   ]);
@@ -125,20 +91,24 @@ export async function listAvailableSlots(params: {
       cursor + service.durationMinutes <= windowEnd;
       cursor += service.durationMinutes
     ) {
-      const start = createUtcDateAtMinutes(date, cursor);
-      const end = new Date(start);
-      end.setUTCMinutes(end.getUTCMinutes() + service.durationMinutes);
+      const start = dt.set({
+        hour: Math.floor(cursor / 60),
+        minute: cursor % 60,
+        second: 0,
+        millisecond: 0,
+      });
+      const end = start.plus({ minutes: service.durationMinutes });
 
-      if (start.getTime() <= now) {
+      if (+start <= now) {
         continue;
       }
 
       const overlaps = bookingRows.some(
-        (booking) => start < booking.endTime && end > booking.startTime,
+        (booking) => +start < +booking.endTime && +end > +booking.startTime,
       );
 
       if (!overlaps) {
-        slots.push(start.toISOString());
+        slots.push(start.toISO());
       }
     }
   }
@@ -154,7 +124,9 @@ export async function createGuestBooking(params: {
   startAtIso: string;
   guestName: string;
   guestEmail: string;
-}): Promise<{ ok: true } | { ok: false; message: string }> {
+}): Promise<
+  { ok: true; bookingId: string } | { ok: false; message: string }
+> {
   const { userId, serviceId, startAtIso, guestName, guestEmail } = params;
   const db = DATABASE.get();
 
@@ -165,6 +137,22 @@ export async function createGuestBooking(params: {
 
   if (startTime.getTime() <= Date.now()) {
     return { ok: false, message: "No puedes reservar un horario pasado." };
+  }
+
+  const profile = await db
+    .select({
+      timezone: profiles.timezone,
+    })
+    .from(profiles)
+    .where(eq(profiles.userId, userId))
+    .limit(1)
+    .then((rows) => rows.at(0));
+
+  if (!profile) {
+    return {
+      ok: false,
+      message: "El proveedor no tiene un perfil configurado.",
+    };
   }
 
   const service = await db
@@ -182,14 +170,19 @@ export async function createGuestBooking(params: {
       ),
     )
     .limit(1)
-    .then((rows) => rows[0] ?? null);
+    .then((rows) => rows.at(0));
 
   if (!service) {
     return { ok: false, message: "El servicio seleccionado no existe." };
   }
 
   const date = startAtIso.slice(0, 10);
-  const validSlots = await listAvailableSlots({ userId, serviceId, date });
+  const validSlots = await listAvailableSlots({
+    userId,
+    serviceId,
+    date,
+    timezone: profile.timezone,
+  });
 
   if (!validSlots.includes(startAtIso)) {
     return {
@@ -222,14 +215,22 @@ export async function createGuestBooking(params: {
     };
   }
 
-  await db.insert(bookings).values({
-    serviceId: service.id,
-    providerUserId: userId,
-    guestName,
-    guestEmail,
-    startTime,
-    endTime,
-  });
+  const createdBooking = await db
+    .insert(bookings)
+    .values({
+      serviceId: service.id,
+      providerUserId: userId,
+      guestName,
+      guestEmail,
+      startTime,
+      endTime,
+    })
+    .returning({ id: bookings.id })
+    .then((rows) => rows.at(0));
 
-  return { ok: true };
+  if (!createdBooking) {
+    return { ok: false, message: "No se pudo crear la reserva." };
+  }
+
+  return { ok: true, bookingId: createdBooking.id };
 }
