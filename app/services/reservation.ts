@@ -6,6 +6,7 @@ import {
   services,
 } from "@/core/db/schema.server";
 import { and, eq, gt, isNull, lt, sql } from "drizzle-orm";
+import type { Booking } from "@/core/types/booking";
 import { DateTime } from "luxon";
 
 function timeToMinutes(value: string): number {
@@ -28,7 +29,6 @@ export async function listAvailableSlots(params: {
   }
 
   const dayBounds = { start: dt.startOf("day"), end: dt.endOf("day") };
-  console.log("Day bounds:", dayBounds.start.toISO(), dayBounds.end.toISO());
   const weekDay = dt.weekday % 7; // Convertir a formato 0 (domingo) - 6 (sábado)
 
   const service = await db
@@ -231,4 +231,34 @@ export async function createGuestBooking(params: {
   }
 
   return { ok: true, bookingId: createdBooking.id };
+}
+
+export async function listActiveBookings(userId: string): Promise<Booking[]> {
+  const db = DATABASE.get();
+  const now = new Date();
+
+  const rows = await db
+    .select({
+      id: bookings.id,
+      serviceId: bookings.serviceId,
+      guestName: bookings.guestName,
+      guestEmail: bookings.guestEmail,
+      startTime: bookings.startTime,
+      endTime: bookings.endTime,
+      createdAt: bookings.createdAt,
+      serviceName: services.name,
+    })
+    .from(bookings)
+    .leftJoin(services, eq(bookings.serviceId, services.id))
+    .where(
+      and(
+        eq(bookings.providerUserId, userId),
+        isNull(bookings.deletedAt),
+        gt(bookings.endTime, now),
+      ),
+    )
+    .orderBy(bookings.startTime)
+    .then((r) => r as Booking[]);
+
+  return rows;
 }

@@ -156,7 +156,6 @@ export async function action({ request }: Route.ActionArgs) {
       endTime: field.endTime,
     };
   }).filter((item) => item !== null);
-  console.log("Availabilities to save:", availabilitiesToSave);
 
   const updateResult = await ResultAsync.fromPromise(
     updateProviderProfileSettings({
@@ -189,13 +188,6 @@ export default function SettingsPage({
 }: Route.ComponentProps) {
   const defaultAvailabilities = buildAvailabilityFields(
     loaderData.profile.availabilities,
-  );
-
-  console.log(
-    "Loader data:",
-    loaderData.profile.availabilities,
-    "Default availabilities:",
-    defaultAvailabilities,
   );
 
   const { form, fields } = useForm(schema, {
@@ -290,13 +282,6 @@ export default function SettingsPage({
                 <div className="grid gap-3">
                   {WEEK_DAYS.map((day) => {
                     const field = form.getFieldset(fieldset[day.value].name);
-
-                    console.log(
-                      "enablesd",
-                      field.enabled.defaultChecked,
-                      "name",
-                      field.enabled.name,
-                    );
 
                     return (
                       <div

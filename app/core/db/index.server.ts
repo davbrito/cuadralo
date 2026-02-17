@@ -4,7 +4,6 @@ import { relations } from "./relations.server";
 import * as schema from "./schema.server";
 
 export function initDB() {
-  console.log("Initializing database connection...");
   return drizzle(env.DATABASE_URL, { schema, relations });
 }
 

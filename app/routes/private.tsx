@@ -90,7 +90,7 @@ export default function PrivateLayout() {
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       className="aria-[current=page]:bg-primary/10 aria-[current=page]:text-primary"
-                      disabled
+                      render={<NavLink to="/agenda" />}
                     >
                       <HugeiconsIcon
                         icon={Calendar01Icon}

@@ -18,7 +18,6 @@ export default {
       () => requestHandler(request, contextProvider),
     );
 
-    console.log("Request handled, closing DB connection...");
     ctx.waitUntil(db.$client.end());
     return response;
   },

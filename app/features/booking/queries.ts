@@ -61,7 +61,11 @@ export async function getPublicReserveData(params: {
     .from(profiles)
     .where(eq(profiles.userId, userId))
     .limit(1)
-    .then((rows) => rows[0] ?? null);
+    .then((rows) => rows.at(0));
+
+  if (!profile) {
+    throw new Error("El proveedor no tiene un perfil configurado.");
+  }
 
   const clerk = getClerkClient();
   const providerUser = await clerk.users.getUser(userId);
@@ -104,7 +108,9 @@ export async function getPublicReserveData(params: {
   };
 }
 
-export async function getPublicBookingDetail(bookingId: string): Promise<PublicBookingDetailData | null> {
+export async function getPublicBookingDetail(
+  bookingId: string,
+): Promise<PublicBookingDetailData | null> {
   const db = DATABASE.get();
 
   const bookingRow = await db

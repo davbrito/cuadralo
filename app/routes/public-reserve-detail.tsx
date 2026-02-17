@@ -38,7 +38,6 @@ export async function loader({ params }: Route.LoaderArgs) {
 export default function PublicReserveDetailPage({
   loaderData,
 }: Route.ComponentProps) {
-  console.log("Loader data:", loaderData);
   const { provider, booking } = loaderData;
   const providerInitial = provider.userId.slice(0, 1).toUpperCase();
 

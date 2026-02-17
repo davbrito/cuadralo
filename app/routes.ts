@@ -11,6 +11,7 @@ export default [
   route("/r/:reserveId", "routes/public-reserve-detail.tsx"),
   layout("routes/private.tsx", [
     index("routes/home.tsx"),
+    route("agenda", "routes/agenda.tsx"),
     route("settings", "routes/settings.tsx"),
   ]),
 ] satisfies RouteConfig;

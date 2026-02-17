@@ -12,7 +12,7 @@
     "composite": true,
     "tsBuildInfoFile": "./node_modules/.cache/tsc/cloudflare.tsbuildinfo",
     "strict": true,
-    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "lib": ["DOM", "DOM.Iterable", "ESNext", "ESNext.Iterator"],
     "types": ["vite/client", "./worker-configuration.d.ts", "node"],
     "target": "ES2022",
     "module": "ES2022",

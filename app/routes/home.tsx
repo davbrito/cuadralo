@@ -1,4 +1,5 @@
-import { Button, buttonVariants } from "@/components/ui/button";
+import CopyLinkButton from "@/components/copy-link-button";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -15,13 +16,12 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { AUTH } from "@/core/context.server";
-import { cn } from "@/lib/utils";
 import {
   createService,
   listServices,
   updateServiceDuration,
 } from "@/services/service";
-import { Form, Link, data } from "react-router";
+import { Form, data } from "react-router";
 import type { Route } from "./+types/home";
 
 export async function loader() {
@@ -292,52 +292,57 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
             <ul className="flex flex-col gap-4">
               {services.map((service) => (
                 <li key={service.id} className="rounded-md border p-4">
-                  <p className="text-sm font-semibold text-foreground">
-                    {service.name}
-                  </p>
-                  <p className="text-muted-foreground mt-1 text-sm">
-                    {service.description || "Sin descripción"}
-                  </p>
-                  <p className="text-muted-foreground mt-2 text-sm">
-                    Duración: {service.durationMinutes} min
-                  </p>
-                  <Form method="post" className="mt-3 flex items-end gap-2">
-                    <input type="hidden" name="serviceId" value={service.id} />
-                    <div className="grid gap-2">
-                      <FieldLabel htmlFor={`duration-${service.id}`}>
-                        Editar duración
-                      </FieldLabel>
-                      <Input
-                        id={`duration-${service.id}`}
-                        name="durationMinutes"
-                        type="number"
-                        min={1}
-                        max={1440}
-                        step={1}
-                        defaultValue={service.durationMinutes}
-                        className="w-32"
-                        required
-                      />
+                  <div className="flex md:flex-row flex-col gap-3">
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-foreground">
+                        {service.name}
+                      </p>
+                      <p className="text-muted-foreground mt-1 text-sm">
+                        {service.description || "Sin descripción"}
+                      </p>
+                      <p className="text-muted-foreground mt-2 text-sm">
+                        Duración: {service.durationMinutes} min
+                      </p>
                     </div>
-                    <Button
-                      type="submit"
-                      variant="outline"
-                      size="sm"
-                      name="intent"
-                      value="updateDuration"
-                    >
-                      Guardar
-                    </Button>
-                  </Form>
+                    <Form method="post" className="mt-3 flex items-end gap-2">
+                      <input
+                        type="hidden"
+                        name="serviceId"
+                        value={service.id}
+                      />
+                      <div className="grid gap-2">
+                        <FieldLabel htmlFor={`duration-${service.id}`}>
+                          Editar duración
+                        </FieldLabel>
+                        <Input
+                          id={`duration-${service.id}`}
+                          name="durationMinutes"
+                          type="number"
+                          min={1}
+                          max={1440}
+                          step={1}
+                          defaultValue={service.durationMinutes}
+                          className="w-32"
+                          required
+                        />
+                      </div>
+                      <Button
+                        type="submit"
+                        variant="outline"
+                        size="sm"
+                        name="intent"
+                        value="updateDuration"
+                      >
+                        Guardar
+                      </Button>
+                    </Form>
+                  </div>
                   <div className="mt-3">
-                    <Link
+                    <CopyLinkButton
                       to={`/p/${userId}/reserve?sid=${service.id}`}
-                      className={cn(
-                        buttonVariants({ variant: "outline", size: "sm" }),
-                      )}
                     >
                       Link de reserva
-                    </Link>
+                    </CopyLinkButton>
                   </div>
                 </li>
               ))}
