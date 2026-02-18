@@ -4,10 +4,9 @@ import type {
   EntryContext,
   HandleErrorFunction,
   RouterContextProvider,
-  unstable_InstrumentationHandlerResult,
-  unstable_ServerInstrumentation,
 } from "react-router";
 import { ServerRouter } from "react-router";
+import { logInstrumentation } from "./core/instrumentation/logger.server";
 
 export default async function handleRequest(
   request: Request,
@@ -56,29 +55,4 @@ export const handleError: HandleErrorFunction = (error, { request }) => {
   }
 };
 
-const logging: unstable_ServerInstrumentation = {
-  handler({ instrument }) {
-    instrument({
-      request: (fn, { request }) => log(`request ${request.url}`, fn),
-    });
-  },
-  route({ instrument, id }) {
-    instrument({
-      middleware: (fn) => log(` middleware (${id})`, fn),
-      loader: (fn) => log(`  loader (${id})`, fn),
-      action: (fn) => log(`  action (${id})`, fn),
-    });
-  },
-};
-
-async function log(
-  label: string,
-  cb: () => Promise<unstable_InstrumentationHandlerResult>,
-) {
-  const start = Date.now();
-  console.log(`-> ${label}`);
-  await cb();
-  console.log(`<- ${label} (${Date.now() - start}ms)`);
-}
-
-export const unstable_instrumentations = [logging];
+export const unstable_instrumentations = [logInstrumentation];
