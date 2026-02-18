@@ -15,6 +15,10 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
+  NativeSelect,
+  NativeSelectOption,
+} from "@/components/ui/native-select";
+import {
   getProviderProfileSettings,
   type ProviderAvailability,
   updateProviderProfileSettings,
@@ -22,7 +26,9 @@ import {
 import { parseSubmission, report, useForm } from "@conform-to/react/future";
 import { coerceFormValue, formatResult } from "@conform-to/zod/v4/future";
 import { set } from "lodash-es";
+import { IANAZone } from "luxon";
 import { ResultAsync } from "neverthrow";
+import { useState } from "react";
 import { data, Form } from "react-router";
 import { z } from "zod/v4";
 import type { Route } from "./+types/settings";
@@ -33,7 +39,11 @@ const schema = coerceFormValue(
       .string()
       .min(1, "La zona horaria es obligatoria.")
       .max(255, "La zona horaria no puede superar 255 caracteres.")
-      .trim(),
+      .trim()
+      .refine(
+        (value) => IANAZone.isValidZone(value),
+        "Zona horaria no válida.",
+      ),
     slotDurationMinutes: z
       .number()
       .int("La duración debe ser un número entero.")
@@ -205,12 +215,13 @@ export default function SettingsPage({
     actionData && "success" in actionData ? actionData.success : null;
 
   const fieldset = fields.availabilities.getFieldset();
+  const now = useState(() => Date.now())[0];
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6 md:p-10">
       <Card>
         <CardHeader>
-          <CardTitle>Ajustes del provider</CardTitle>
+          <CardTitle>Ajustes del Proveedor de Servicios</CardTitle>
           <CardDescription>
             Configura tu zona horaria, duración base y disponibilidad semanal.
           </CardDescription>
@@ -230,15 +241,42 @@ export default function SettingsPage({
           <Form method="post" className="flex flex-col gap-6">
             <FieldGroup>
               <Field>
-                <FieldLabel htmlFor={fields.timezone.id}>Timezone</FieldLabel>
-                <Input
+                <FieldLabel htmlFor={fields.timezone.id}>
+                  Zona Horaria
+                </FieldLabel>
+                <NativeSelect
                   id={fields.timezone.id}
                   name={fields.timezone.name}
                   defaultValue={fields.timezone.defaultValue}
-                  placeholder="Ej: America/Caracas"
                   required
                   aria-invalid={fields.timezone.ariaInvalid}
-                />
+                >
+                  {Intl.supportedValuesOf("timeZone")
+                    .map((tz) => {
+                      const zone = new IANAZone(tz);
+
+                      const name = zone
+                        .offsetName(now, { format: "long" })
+                        ?.replace(/^./, (char) => char.toUpperCase());
+
+                      const offset = zone.formatOffset(now, "short");
+                      const label = `${name} (${tz} ${offset})`;
+
+                      return {
+                        offset: zone.offset(now),
+                        label: label,
+                        value: tz,
+                      };
+                    })
+                    .sort((a, b) => a.offset - b.offset)
+                    .map((tz) => {
+                      return (
+                        <NativeSelectOption key={tz.value} value={tz.value}>
+                          {tz.label}
+                        </NativeSelectOption>
+                      );
+                    })}
+                </NativeSelect>
                 <FieldError
                   errors={
                     fields.timezone.ariaInvalid
@@ -286,7 +324,7 @@ export default function SettingsPage({
                     return (
                       <div
                         key={day.value}
-                        className="rounded-2xl border bg-card p-4"
+                        className="bg-card rounded-2xl border p-4"
                       >
                         <div className="grid gap-3 sm:grid-cols-[160px_1fr_1fr] sm:items-end">
                           <label className="flex h-9 items-center gap-2 text-sm font-medium">
