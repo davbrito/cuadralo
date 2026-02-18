@@ -15,7 +15,7 @@ import {
   SidebarRail,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { AUTH } from "@/core/context.server";
+import { AUTH, CLOUDFLARE } from "@/core/context.server";
 import { ensureProfile } from "@/features/auth/mutations";
 import { privateMiddleware } from "@/middleware/auth";
 import { SignedIn } from "@clerk/react-router";
@@ -34,7 +34,7 @@ export const middleware: Route.MiddlewareFunction[] = [privateMiddleware];
 export async function loader() {
   const userId = AUTH.get().userId;
 
-  await ensureProfile(userId);
+  CLOUDFLARE.get().ctx.waitUntil(ensureProfile(userId));
 
   return { userId };
 }
@@ -122,15 +122,15 @@ export default function PrivateLayout() {
         </Sidebar>
 
         <SidebarInset className="bg-muted/40">
-          <header className="sticky top-0 z-10 border-b bg-background/95 backdrop-blur">
+          <header className="bg-background/95 sticky top-0 z-10 border-b backdrop-blur">
             <div className="flex items-center justify-between px-6 py-4">
               <div className="flex items-center gap-3">
                 <SidebarTrigger />
                 <div>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  <p className="text-muted-foreground text-xs tracking-wide uppercase">
                     Panel principal
                   </p>
-                  <h1 className="text-lg font-semibold text-foreground">
+                  <h1 className="text-foreground text-lg font-semibold">
                     Gestiona tus servicios
                   </h1>
                 </div>

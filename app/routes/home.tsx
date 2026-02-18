@@ -20,6 +20,7 @@ import {
   createService,
   listServices,
   updateServiceDuration,
+  deleteService,
 } from "@/features/provider/service";
 import { Form, data } from "react-router";
 import type { Route } from "./+types/home";
@@ -95,6 +96,39 @@ export async function action({ request }: Route.ActionArgs) {
     }
 
     return data({ ok: true, intent, success: "Duración actualizada." });
+  }
+
+  if (intent === "deleteService") {
+    const serviceId = String(formData.get("serviceId") ?? "").trim();
+
+    if (!serviceId) {
+      return data(
+        {
+          ok: false,
+          intent,
+          formError: "No se encontró el servicio a eliminar.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const [error, deleted] = await deleteService({ serviceId }).then(
+      (rows) => [null, rows] as const,
+      (deleteError) => [deleteError, null] as const,
+    );
+
+    if (error || !deleted || deleted.length === 0) {
+      return data(
+        {
+          ok: false,
+          intent,
+          formError: "No se pudo eliminar el servicio.",
+        },
+        { status: 500 },
+      );
+    }
+
+    return data({ ok: true, intent, success: "Servicio eliminado." });
   }
 
   const name = String(formData.get("name") ?? "").trim();
@@ -292,9 +326,9 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
             <ul className="flex flex-col gap-4">
               {services.map((service) => (
                 <li key={service.id} className="rounded-md border p-4">
-                  <div className="flex md:flex-row flex-col gap-3">
+                  <div className="flex flex-col gap-3 md:flex-row">
                     <div className="flex-1">
-                      <p className="text-sm font-semibold text-foreground">
+                      <p className="text-foreground text-sm font-semibold">
                         {service.name}
                       </p>
                       <p className="text-muted-foreground mt-1 text-sm">
@@ -338,11 +372,27 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
                     </Form>
                   </div>
                   <div className="mt-3">
-                    <CopyLinkButton
-                      to={`/p/${userId}/reserve?sid=${service.id}`}
-                    >
+                    <CopyLinkButton to={`/p/${userId}/reserve/${service.id}`}>
                       Link de reserva
                     </CopyLinkButton>
+                  </div>
+                  <div className="mt-3">
+                    <Form method="post" className="flex items-center gap-2">
+                      <input
+                        type="hidden"
+                        name="serviceId"
+                        value={service.id}
+                      />
+                      <Button
+                        type="submit"
+                        variant="destructive"
+                        size="sm"
+                        name="intent"
+                        value="deleteService"
+                      >
+                        Eliminar
+                      </Button>
+                    </Form>
                   </div>
                 </li>
               ))}

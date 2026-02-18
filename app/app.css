@@ -132,3 +132,38 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+.app-loader {
+  /* fixed top-0 right-0 left-0 z-50 h-4 bg-linear-to-r from-blue-500 to-purple-500 */
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 50;
+  height: 0.25rem;
+  background: linear-gradient(
+    to right,
+    var(--color-slate-700) 0%,
+    var(--color-slate-700) calc(var(--loader-progress) - 10%),
+    var(--color-slate-400) var(--loader-progress, 50%),
+    var(--color-slate-700) calc(var(--loader-progress) + 10%),
+    var(--color-slate-700) 100%
+  );
+  animation: loading 1.5s infinite;
+}
+
+@property --loader-progress {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 0%;
+}
+
+@keyframes loading {
+  0% {
+    --loader-progress: -10%;
+  }
+  50% {
+    --loader-progress: 50%;
+  }
+  100% {
+    --loader-progress: 110%;
+  }
+}

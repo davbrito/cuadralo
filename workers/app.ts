@@ -18,7 +18,7 @@ export default {
       () => requestHandler(request, contextProvider),
     );
 
-    ctx.waitUntil(db.$client.end());
+    // ctx.waitUntil(db.$client.end());
     return response;
   },
 } satisfies ExportedHandler<Env>;

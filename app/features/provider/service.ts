@@ -70,3 +70,20 @@ export async function updateServiceDuration(params: {
     )
     .returning({ id: services.id });
 }
+
+export async function deleteService(params: { serviceId: string }) {
+  const { serviceId } = params;
+  const userId = AUTH.get().userId;
+
+  return await DATABASE.get()
+    .update(services)
+    .set({ deletedAt: new Date() })
+    .where(
+      and(
+        eq(services.id, serviceId),
+        eq(services.userId, userId),
+        isNull(services.deletedAt),
+      ),
+    )
+    .returning({ id: services.id });
+}

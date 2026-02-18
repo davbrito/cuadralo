@@ -10,7 +10,7 @@ import {
 import { getPublicBookingDetail } from "@/features/booking/queries";
 import { cn } from "@/lib/utils";
 import { Link, data } from "react-router";
-import type { Route } from "./+types/public-reserve-detail";
+import type { Route } from "./+types/detail";
 
 function formatDateTime(date: Date, timezone: string) {
   return new Intl.DateTimeFormat(undefined, {
@@ -39,7 +39,7 @@ export default function PublicReserveDetailPage({
   loaderData,
 }: Route.ComponentProps) {
   const { provider, booking } = loaderData;
-  const providerInitial = provider.userId.slice(0, 1).toUpperCase();
+  const providerInitial = provider.displayName.slice(0, 1).toUpperCase();
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-4 md:p-8">
@@ -54,7 +54,7 @@ export default function PublicReserveDetailPage({
           </Avatar>
           <div>
             <CardTitle>{provider.displayName}</CardTitle>
-            <CardDescription>{provider.timezone}</CardDescription>
+            <CardDescription>{provider.profile.timezone}</CardDescription>
           </div>
         </CardHeader>
       </Card>
@@ -75,7 +75,7 @@ export default function PublicReserveDetailPage({
           </p>
           <p>
             <span className="font-medium">Horario:</span>{" "}
-            {formatDateTime(booking.startTime, provider.timezone)}
+            {formatDateTime(booking.startTime, provider.profile.timezone)}
           </p>
           <p>
             <span className="font-medium">Nombre:</span>{" "}
@@ -88,7 +88,7 @@ export default function PublicReserveDetailPage({
 
           <div className="pt-2">
             <Link
-              to={`/p/${provider.userId}/reserve?sid=${booking.service.id}`}
+              to={`/p/${provider.userId}/reserve/${booking.service.id}`}
               className={cn(buttonVariants({ variant: "outline" }))}
             >
               Crear otra reserva
